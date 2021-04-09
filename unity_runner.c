@@ -42,6 +42,9 @@ static void RunAllTests(void)
 #if defined(HAL_SPI_MODULE_ENABLED) && defined(HAL_PL330_MODULE_ENABLED) && defined(UNITY_HAL_SPI)
     RUN_TEST_GROUP(HAL_SPI);
 #endif
+#if defined(UNITY_MID_SDHCI) && defined(DRIVERS_SDHCI)
+    RUN_TEST_GROUP(MID_SDHCI);
+#endif
 }
 
 int test_main(void)

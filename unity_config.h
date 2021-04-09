@@ -23,6 +23,7 @@
 #define UNITY_HAL_DEMO
 #ifdef SOC_RK3568
 #define UNITY_HAL_SPI
+#define UNITY_MID_SDHCI
 #endif
 /************** HAL Macro Define *****************/
 
