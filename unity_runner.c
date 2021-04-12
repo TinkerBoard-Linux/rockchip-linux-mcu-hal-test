@@ -45,6 +45,9 @@ static void RunAllTests(void)
 #if defined(UNITY_MID_SDHCI) && defined(DRIVERS_SDHCI)
     RUN_TEST_GROUP(MID_SDHCI);
 #endif
+#if defined(HAL_I2C_MODULE_ENABLED) && defined(UNITY_HAL_I2C)
+    RUN_TEST_GROUP(HAL_I2C);
+#endif
 }
 
 int test_main(void)
