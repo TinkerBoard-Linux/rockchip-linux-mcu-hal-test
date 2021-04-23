@@ -3,7 +3,7 @@
 # Copyright (c) 2020 Rockchip Electronics Co., Ltd.
 
 #-------------------------------------------------------------------------
-# set HAL_PATH
+# set HAL_TEST_PATH
 #-------------------------------------------------------------------------
 HAL_TEST_INC += \
 -I"$(HAL_PATH)/test/unity/src" \
@@ -20,3 +20,6 @@ HAL_TEST_SRC += \
     $(HAL_PATH)/test \
     $(HAL_PATH)/test/coremark \
     $(HAL_PATH)/test/coremark/barebones \
+
+SRC_DIRS += $(HAL_TEST_SRC)
+INCLUDES += $(HAL_TEST_INC)
