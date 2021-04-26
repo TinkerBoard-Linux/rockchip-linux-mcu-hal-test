@@ -85,13 +85,13 @@ struct RK_SPI_MESSAGE {
 /***************************** Structure Definition **************************/
 
 /***************************** Function Declare ******************************/
-HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *config);
-uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length);
-uint32_t SPI_Write(uint8_t id, uint8_t cs, const void *sendBuf, uint32_t length);
-uint32_t SPI_Read(uint8_t id, uint8_t cs, void *recvBuf, uint32_t length);
-HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1);
-HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1);
-HAL_Status SPI_Init(uint8_t id);
+static HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *config);
+static uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length);
+static uint32_t SPI_Write(uint8_t id, uint8_t cs, const void *sendBuf, uint32_t length);
+static uint32_t SPI_Read(uint8_t id, uint8_t cs, void *recvBuf, uint32_t length);
+static HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1);
+static HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1);
+static HAL_Status SPI_Init(uint8_t id);
 
 /********************* Private MACRO Definition ******************************/
 
@@ -160,7 +160,7 @@ struct SPI_DEVICE_CLASS *gSpiDev[SPI_DEVICE_MAX] =
 
 /********************* Public Function Definition ****************************/
 
-HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
+static HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
 {
     struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiDev[id];
     struct SPI_HANDLE *pSPI = &spi->instance;
@@ -272,7 +272,7 @@ static void SPI_DmaTxCb(void *data)
 static int SPI_DmaPrepare(struct SPI_DEVICE_CLASS *spi, struct RK_SPI_MESSAGE *message)
 {
     struct SPI_HANDLE *pSPI = &spi->instance;
-    int ret;
+    int ret = 0;
     struct DMA_SLAVE_CONFIG sConfig;
 
     spi->state &= ~RXBUSY;
@@ -326,10 +326,10 @@ static int SPI_DmaPrepare(struct SPI_DEVICE_CLASS *spi, struct RK_SPI_MESSAGE *m
         ret = HAL_PL330_Start(spi->dmaTxChan);
     }
 
-    return 0;
+    return ret;
 }
 
-uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
+static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
 {
     struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiDev[id];
     struct SPI_HANDLE *pSPI = &spi->instance;
@@ -431,7 +431,7 @@ uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
     return spi->error ? 0 :  message->length;
 }
 
-uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length)
+static uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length)
 {
     uint32_t ret;
     struct RK_SPI_MESSAGE message;
@@ -449,23 +449,23 @@ uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf
     return ret;
 }
 
-uint32_t SPI_Read(uint8_t id, uint8_t ch, void *recvBuf, uint32_t length)
+static uint32_t SPI_Read(uint8_t id, uint8_t ch, void *recvBuf, uint32_t length)
 {
     HAL_ASSERT(id < SPI_DEVICE_MAX);
 
     return SPI_Transfer(id, ch, NULL, recvBuf, length);
 }
 
-uint32_t SPI_Write(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t length)
+static uint32_t SPI_Write(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t length)
 {
     HAL_ASSERT(id < SPI_DEVICE_MAX);
 
     return SPI_Transfer(id, ch, sendBuf, NULL, length);
 }
 
-HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1)
+static HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1)
 {
-    HAL_Status ret;
+    HAL_Status ret = HAL_OK;
     struct RK_SPI_MESSAGE message;
 
     HAL_ASSERT(id < SPI_DEVICE_MAX);
@@ -500,12 +500,13 @@ HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32
 
 out:
 
-    return HAL_OK;
+    return ret;
 }
 
-HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
+static HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
 {
-    HAL_Status ret;
+    HAL_Status ret = HAL_OK;
+    uint32_t retSize;
     struct RK_SPI_MESSAGE message;
 
     HAL_ASSERT(id < SPI_DEVICE_MAX);
@@ -518,8 +519,7 @@ HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_
     message.csTake = 1;
     message.csRelease = 0;
 
-    ret = SPI_ReadAndWrite(id, &message);
-    if (ret != len0) {
+    if (SPI_ReadAndWrite(id, &message) != len0) {
         ret = HAL_ERROR;
 
         goto out;
@@ -533,17 +533,16 @@ HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_
     message.csTake = 0;
     message.csRelease = 1;
 
-    ret = SPI_ReadAndWrite(id, &message);
-    if (ret != len1) {
+    if (SPI_ReadAndWrite(id, &message) != len1) {
         ret = HAL_ERROR;
     }
 
 out:
 
-    return HAL_OK;
+    return ret;
 }
 
-HAL_Status SPI_Init(uint8_t id)
+static HAL_Status SPI_Init(uint8_t id)
 {
     struct SPI_DEVICE_CLASS *spi;
     struct RK_SPI_CONFIG config;
@@ -582,7 +581,7 @@ TEST_TEAR_DOWN(HAL_SPI){
 }
 
 /* SPI test case 0 */
-void SPI_LoopTest(uint16_t size)
+static void SPI_LoopTest(uint16_t size)
 {
     uint32_t i, ret;
 
@@ -610,7 +609,7 @@ void SPI_LoopTest(uint16_t size)
 }
 
 /* SPI test case 1 */
-void SPI_WriteTest(uint16_t size)
+static void SPI_WriteTest(uint16_t size)
 {
     uint32_t i, ret;
 
@@ -624,9 +623,9 @@ void SPI_WriteTest(uint16_t size)
 }
 
 /* SPI test case 2 */
-void SPI_ReadTest(uint16_t size)
+static void SPI_ReadTest(uint16_t size)
 {
-    uint32_t i, ret;
+    uint32_t ret;
 
     HAL_DBG("SPI%d read test, size=%d\n", SPI_TEST_ID, size);
 
