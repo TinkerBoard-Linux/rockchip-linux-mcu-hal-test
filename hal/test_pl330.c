@@ -24,10 +24,12 @@ TEST_SETUP(HAL_PL330){
 TEST_TEAR_DOWN(HAL_PL330){
 }
 
+#ifdef HAL_NVIC_MODULE_ENABLED
 static void HAL_PL330_Handler(void)
 {
     HAL_PL330_IrqHandler(s_pl330);
 }
+#endif
 
 static void MEMCPY_Callback(void *cparam)
 {
