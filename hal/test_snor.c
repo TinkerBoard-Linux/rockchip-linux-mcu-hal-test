@@ -106,11 +106,11 @@ static HAL_Status SNOR_STRESS_RANDOM_TEST(uint32_t testEndLBA)
 }
 
 #ifdef HAL_FSPI_XIP_ENABLE
-static HAL_Status SNOR_XIP_RANDOM_TEST(uint32_t testEndLBA)
+static HAL_Status SNOR_XIP_RANDOM_TEST(int32_t testEndLBA)
 {
     int32_t j, ret;
-    uint32_t testLBA = 0;
-    uint32_t testCount, testSecCount = 1;
+    int32_t testLBA = 0;
+    int32_t testCount, testSecCount = 1;
     struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)nor->spi->userdata;
 
     HAL_DBG("---------%s Begin to set pattern---------\n", __func__);
@@ -150,7 +150,7 @@ static HAL_Status SNOR_XIP_RANDOM_TEST(uint32_t testEndLBA)
         }
         pwrite32[0] = testLBA;
         pread32 = (uint32_t *)(host->xipMemData + testLBA * nor->sectorSize);
-        for (j = 0; j < testSecCount * nor->sectorSize / 4; j++) {
+        for (j = 0; j < testSecCount * (int32_t)nor->sectorSize / 4; j++) {
             if (pwrite32[j] != pread32[j]) {
                 HAL_DBG_HEX("w:", pwrite32, 4, testSecCount * nor->sectorSize / 4);
                 HAL_DBG_HEX("r:", pread32, 4, testSecCount * nor->sectorSize / 4);
