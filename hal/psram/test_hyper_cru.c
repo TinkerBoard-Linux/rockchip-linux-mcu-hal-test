@@ -6,6 +6,8 @@
 #include "hal_bsp.h"
 
 #if defined(RKMCU_RK2206) && defined(HAL_CRU_MODULE_ENABLED)
+#include "test_hyper_cru.h"
+
 static struct PLL_CONFIG pConfig;
 
 static HAL_Status CRU_GPLL_SetFreq(struct PLL_CONFIG *pll_CFG)
