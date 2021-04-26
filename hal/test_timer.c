@@ -34,6 +34,7 @@ static HAL_Status TIMER_SetReloadNum(struct TIMER_REG *pReg, uint64_t currentVal
     return HAL_OK;
 }
 
+#ifdef HAL_NVIC_MODULE_ENABLED
 static HAL_Status HAL_TIMER_Handler(void)
 {
     if (HAL_TIMER_ClrInt(timerDev)) {
@@ -43,6 +44,7 @@ static HAL_Status HAL_TIMER_Handler(void)
 
     return HAL_OK;
 }
+#endif
 
 TEST_GROUP(HAL_TIMER);
 
