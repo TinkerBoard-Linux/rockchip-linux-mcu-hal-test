@@ -258,8 +258,11 @@ static HAL_Status SNOR_Adapt(void)
     nor->spi->userdata = (void *)host;
     nor->spi->mode = HAL_SPI_MODE_3;
     nor->spi->xfer = SPI_Xfer;
-#ifdef HAL_NVIC_MODULE_ENABLED
-    HAL_NVIC_ConfigExtIRQ(FSPI0_IRQn, (NVIC_IRQHandler) & FSPI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
+#if defined(HAL_NVIC_MODULE_ENABLED)
+    HAL_NVIC_ConfigExtIRQ(FSPI0_IRQn, (NVIC_IRQHandler)&FSPI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
+#elif defined(HAL_IRQ_HANDLER_MODULE_ENABLED) && defined(HAL_GIC_MODULE_ENABLED)
+    HAL_IRQ_HANDLER_SetIRQHandler(FSPI0_IRQn, (HAL_IRQ_HANDLER)&FSPI_IRQHandler, NULL);
+    HAL_GIC_Enable(FSPI0_IRQn);
 #endif
 #ifdef HAL_FSPI_TUNING_ENABLED
     uint8_t idByte[5];
@@ -340,9 +343,6 @@ TEST_GROUP_RUNNER(HAL_SNOR){
     /* SNOR deinit */
     ret = HAL_SNOR_DeInit(nor);
     TEST_ASSERT(ret == HAL_OK);
-
-    free(nor->spi);
-    free(nor);
 }
 
 #endif
