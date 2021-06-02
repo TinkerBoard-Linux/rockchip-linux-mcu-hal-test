@@ -10,9 +10,106 @@
 
 #ifdef HAL_SNOR_MODULE_ENABLED
 
+/*************************** SNOR DRIVER ****************************/
+struct SPI_NOR *nor;
+
+#if defined(HAL_SNOR_FSPI_HOST)
+static HAL_Status FSPI_IRQHandler(void)
+{
+    struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)nor->spi->userdata;
+
+    HAL_FSPI_IRQHelper(host);
+
+    return HAL_OK;
+}
+
+static HAL_Status SPI_Xfer(struct SNOR_HOST *spi, struct HAL_SPI_MEM_OP *op)
+{
+    struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)spi->userdata;
+
+    host->mode = spi->mode;
+    host->cs = 0;
+
+    return HAL_FSPI_SpiXfer(host, op);
+}
+
+static HAL_Status SPI_XipConfig(struct SNOR_HOST *spi, struct HAL_SPI_MEM_OP *op, uint32_t on)
+{
+    struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)spi->userdata;
+
+    host->cs = 0;
+    if (op) {
+        HAL_FSPI_XmmcSetting(host, op);
+    }
+
+    return HAL_FSPI_XmmcRequest(host, on);
+}
+
+static HAL_Status SNOR_Adapt(struct SPI_NOR *nor)
+{
+    struct HAL_FSPI_HOST *host;
+    HAL_Status ret;
+
+    /* Designated host to SNOR */
+    host = &g_fspi0Dev;
+    host->xmmcDev[0].type = DEV_NOR;
+    HAL_FSPI_Init(host);
+    nor->spi->userdata = (void *)host;
+    nor->spi->mode = HAL_SPI_MODE_3;
+    nor->spi->xfer = SPI_Xfer;
+#ifdef HAL_FSPI_DMA_ENABLED
+#if defined(HAL_NVIC_MODULE_ENABLED)
+    HAL_NVIC_ConfigExtIRQ(FSPI0_IRQn, (NVIC_IRQHandler)&FSPI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
+#elif defined(HAL_IRQ_HANDLER_MODULE_ENABLED) && defined(HAL_GIC_MODULE_ENABLED)
+    HAL_IRQ_HANDLER_SetIRQHandler(FSPI0_IRQn, (HAL_IRQ_HANDLER)&FSPI_IRQHandler, NULL);
+    HAL_GIC_Enable(FSPI0_IRQn);
+#endif
+#endif
+
+#ifdef UNITY_HAL_FSPI_TUNING_TEST
+    uint8_t idByte[5];
+    uint32_t i, j;
+
+    nor->spi->mode = HAL_SPI_MODE_0;
+    HAL_SNOR_Init(nor);
+    for (i = 0; i <= HAL_FSPI_MAX_DELAY_LINE_CELLS; i += 2) {
+        HAL_FSPI_SetDelayLines(host, (uint8_t)i);
+        HAL_SNOR_ReadID(nor, idByte);
+        if (HAL_SNOR_IsFlashSupported(idByte)) {
+            break;
+        }
+    }
+    for (j = HAL_FSPI_MAX_DELAY_LINE_CELLS; j > i; j -= 2) {
+        HAL_FSPI_SetDelayLines(host, (uint8_t)j);
+        HAL_SNOR_ReadID(nor, idByte);
+        if (HAL_SNOR_IsFlashSupported(idByte)) {
+            break;
+        }
+    }
+    HAL_FSPI_SetDelayLines(host, (uint8_t)((i + j) / 2));
+    HAL_SNOR_ReadID(nor, idByte);
+    if (!HAL_SNOR_IsFlashSupported(idByte)) {
+        nor->spi->mode = HAL_SPI_MODE_3;
+    }
+#endif
+
+    nor->spi->mode |= (HAL_SPI_TX_QUAD | HAL_SPI_RX_QUAD);
+#ifdef HAL_FSPI_XIP_ENABLE
+    nor->spi->mode |= HAL_SPI_XIP;
+    nor->spi->xipConfig = SPI_XipConfig;
+#endif
+
+    /* Init spi nor abstract */
+    ret = HAL_SNOR_Init(nor);
+
+    return ret;
+}
+#endif
+
+/*************************** SNOR TEST ****************************/
+
 struct SPI_NOR nor_buf;
 struct SNOR_HOST nor_spi_buf;
-struct SPI_NOR *nor;
 #define maxest_sector 4
 static uint8_t *pwrite;
 static uint8_t *pread;
@@ -173,6 +270,9 @@ static HAL_Status SNOR_XIP_RANDOM_TEST(int32_t testEndLBA)
 #endif
 
 /*************************** SNOR TEST ****************************/
+uint8_t buffer_temp1[maxest_sector * 4096 + 64];
+uint8_t buffer_temp2[maxest_sector * 4096 + 64];
+
 TEST_GROUP(HAL_SNOR);
 
 TEST_SETUP(HAL_SNOR){
@@ -213,100 +313,6 @@ TEST(HAL_SNOR, SnorXIPRandomTest){
 }
 #endif
 
-/*************************** SNOR FSPI HOST SETTING****************************/
-#if defined(HAL_SNOR_FSPI_HOST)
-static HAL_Status FSPI_IRQHandler(void)
-{
-    struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)nor->spi->userdata;
-
-    HAL_FSPI_IRQHelper(host);
-
-    return HAL_OK;
-}
-
-static HAL_Status SPI_Xfer(struct SNOR_HOST *spi, struct HAL_SPI_MEM_OP *op)
-{
-    struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)spi->userdata;
-
-    host->mode = spi->mode;
-    host->cs = 0;
-
-    return HAL_FSPI_SpiXfer(host, op);
-}
-
-static HAL_Status SPI_XipConfig(struct SNOR_HOST *spi, struct HAL_SPI_MEM_OP *op, uint32_t on)
-{
-    struct HAL_FSPI_HOST *host = (struct HAL_FSPI_HOST *)spi->userdata;
-
-    host->cs = 0;
-    if (op) {
-        HAL_FSPI_XmmcSetting(host, op);
-    }
-
-    return HAL_FSPI_XmmcRequest(host, on);
-}
-
-static HAL_Status SNOR_Adapt(void)
-{
-    struct HAL_FSPI_HOST *host;
-    HAL_Status ret;
-
-    /* Designated host to SNOR */
-    host = &g_fspi0Dev;
-    host->xmmcDev[0].type = DEV_NOR;
-    HAL_FSPI_Init(host);
-    nor->spi->userdata = (void *)host;
-    nor->spi->mode = HAL_SPI_MODE_3;
-    nor->spi->xfer = SPI_Xfer;
-#if defined(HAL_NVIC_MODULE_ENABLED)
-    HAL_NVIC_ConfigExtIRQ(FSPI0_IRQn, (NVIC_IRQHandler)&FSPI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
-#elif defined(HAL_IRQ_HANDLER_MODULE_ENABLED) && defined(HAL_GIC_MODULE_ENABLED)
-    HAL_IRQ_HANDLER_SetIRQHandler(FSPI0_IRQn, (HAL_IRQ_HANDLER)&FSPI_IRQHandler, NULL);
-    HAL_GIC_Enable(FSPI0_IRQn);
-#endif
-#ifdef HAL_FSPI_TUNING_ENABLED
-    uint8_t idByte[5];
-    uint32_t i, j;
-
-    nor->spi->mode = HAL_SPI_MODE_0;
-    HAL_SNOR_Init(nor);
-    for (i = 0; i <= HAL_FSPI_MAX_DELAY_LINE_CELLS; i += 2) {
-        HAL_FSPI_SetDelayLines(host, (uint8_t)i);
-        HAL_SNOR_ReadID(nor, idByte);
-        if (HAL_SNOR_IsFlashSupported(idByte)) {
-            break;
-        }
-    }
-    for (j = HAL_FSPI_MAX_DELAY_LINE_CELLS; j > i; j -= 2) {
-        HAL_FSPI_SetDelayLines(host, (uint8_t)j);
-        HAL_SNOR_ReadID(nor, idByte);
-        if (HAL_SNOR_IsFlashSupported(idByte)) {
-            break;
-        }
-    }
-    HAL_FSPI_SetDelayLines(host, (uint8_t)((i + j) / 2));
-    HAL_SNOR_ReadID(nor, idByte);
-    if (!HAL_SNOR_IsFlashSupported(idByte)) {
-        nor->spi->mode = HAL_SPI_MODE_3;
-    }
-#endif
-
-    nor->spi->mode |= (HAL_SPI_TX_QUAD | HAL_SPI_RX_QUAD);
-#ifdef HAL_FSPI_XIP_ENABLE
-    nor->spi->mode |= HAL_SPI_XIP;
-    nor->spi->xipConfig = SPI_XipConfig;
-#endif
-
-    /* Init spi nor abstract */
-    ret = HAL_SNOR_Init(nor);
-
-    return ret;
-}
-#endif
-
-uint8_t buffer_temp1[maxest_sector * 4096 + 64];
-uint8_t buffer_temp2[maxest_sector * 4096 + 64];
-
 /* Test code should be place in ram */
 TEST_GROUP_RUNNER(HAL_SNOR){
     struct SNOR_HOST *spi;
@@ -328,9 +334,10 @@ TEST_GROUP_RUNNER(HAL_SNOR){
     nor = &nor_buf;
     memset(nor, 0, sizeof(struct SPI_NOR));
     TEST_ASSERT_NOT_NULL(nor);
-    nor->spi = spi;
+
 #if defined(HAL_SNOR_FSPI_HOST)
-    ret = SNOR_Adapt();
+    nor->spi = spi;
+    ret = SNOR_Adapt(nor);
 
     TEST_ASSERT(ret == HAL_OK);
 #endif
