@@ -48,6 +48,9 @@ static void RunAllTests(void)
 #if defined(HAL_I2C_MODULE_ENABLED) && defined(UNITY_HAL_I2C)
     RUN_TEST_GROUP(HAL_I2C);
 #endif
+#ifdef HAL_SARADC_MODULE_ENABLED
+    RUN_TEST_GROUP(HAL_SARADC);
+#endif
 }
 
 int test_main(void)
