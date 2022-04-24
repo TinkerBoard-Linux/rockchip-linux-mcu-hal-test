@@ -104,6 +104,26 @@ static HAL_Status SNOR_Adapt(struct SPI_NOR *nor)
 
     return ret;
 }
+#elif defined(HAL_SNOR_SFC_HOST)
+static HAL_Status SNOR_Adapt(struct SPI_NOR *nor)
+{
+    struct HAL_SFC_HOST *host;
+
+    /* Designated host to SNOR */
+    host->instance = SFC;
+    HAL_SFC_Init(host);
+    nor->spi->userdata = (void *)host;
+    nor->spi->mode = HAL_SPI_MODE_3;
+    nor->spi->mode |= (HAL_SPI_TX_QUAD | HAL_SPI_RX_QUAD);
+    nor->spi->xfer = HAL_SFC_SpiXfer;
+
+    /* Init spi nor abstract */
+    if (HAL_SNOR_Init(nor)) {
+        return HAL_ERROR;
+    } else {
+        return HAL_OK;
+    }
+}
 #endif
 
 /*************************** SNOR TEST ****************************/
@@ -335,7 +355,7 @@ TEST_GROUP_RUNNER(HAL_SNOR){
     memset(nor, 0, sizeof(struct SPI_NOR));
     TEST_ASSERT_NOT_NULL(nor);
 
-#if defined(HAL_SNOR_FSPI_HOST)
+#if defined(HAL_SNOR_FSPI_HOST) || defined(HAL_SNOR_SFC_HOST)
     nor->spi = spi;
     ret = SNOR_Adapt(nor);
 
