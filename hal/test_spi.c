@@ -556,7 +556,7 @@ static HAL_Status SPI_Init(uint8_t id)
 
     HAL_SPI_Init(&spi->instance, (uint32_t)spi->halDev->base, spi->halDev->isSlave);
 
-    /* Pre config */
+    /* Pre-config */
     config.mode |= RK_SPI_MASTER;
     config.dataWidth = 8;
     config.maxHz = ROCKCHIP_SPI_SPEED_DEFAULT;
@@ -564,9 +564,12 @@ static HAL_Status SPI_Init(uint8_t id)
 
     return HAL_OK;
 }
+
 /*************************** SPI TEST ****************************/
-#define SPI_TEST_SIZE 4096
+/* Test-config */
 #define SPI_TEST_ID   0
+
+#define SPI_TEST_SIZE 4096
 static uint8_t tx_buf[2 * SPI_TEST_SIZE];
 static uint8_t rx_buf[2 * SPI_TEST_SIZE];
 static uint8_t *tx;
@@ -593,13 +596,11 @@ static void SPI_LoopTest(uint16_t size)
     tx[0] = 0xa5;
     memset(rx, 0, SPI_TEST_SIZE);
     ret = SPI_Transfer(SPI_TEST_ID, 0, (const void *)tx, (void *)rx, size);
-    if (ret) {
-        HAL_DBG_ERR("It's a spi loop test, so connecting mosi and miso in advance!\n");
-    }
     TEST_ASSERT(ret == size);
 
     for (i = 0; i < size; i++) {
         if (tx[i] != rx[i]) {
+            HAL_DBG_ERR("It's a spi loop test, so connecting mosi and miso in advance!\n");
             HAL_DBG_HEX("w:", tx, 4, size / 4);
             HAL_DBG_HEX("r:", rx, 4, size / 4);
             TEST_ASSERT(0);
