@@ -55,5 +55,8 @@ static void RunAllTests(void)
 
 int test_main(void)
 {
-    return UnityMain(1, NULL, RunAllTests);
+    char *argv[1];
+
+	argv[0] = "hal unit test";
+    return UnityMain(1, argv, RunAllTests);
 }
