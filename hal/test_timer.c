@@ -34,7 +34,7 @@ static HAL_Status TIMER_SetReloadNum(struct TIMER_REG *pReg, uint64_t currentVal
     return HAL_OK;
 }
 
-#ifdef HAL_NVIC_MODULE_ENABLED
+#if defined(HAL_NVIC_MODULE_ENABLED) || defined(HAL_GIC_MODULE_ENABLED)
 static HAL_Status HAL_TIMER_Handler(void)
 {
     if (HAL_TIMER_ClrInt(timerDev)) {
@@ -143,9 +143,12 @@ static void TIMER_TestLoop(int32_t num, struct TIMER_REG *t, IRQn_Type irq)
 {
     timerDev = t;
     HAL_DBG("%s TIMER%ld\n", __func__, num);
-#ifdef HAL_NVIC_MODULE_ENABLED
+#if defined(HAL_NVIC_MODULE_ENABLED)
     HAL_NVIC_ConfigExtIRQ(irq, (NVIC_IRQHandler) & HAL_TIMER_Handler,
                           NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
+#elif defined(HAL_GIC_MODULE_ENABLED)
+    HAL_IRQ_HANDLER_SetIRQHandler(irq, HAL_TIMER_Handler, NULL);
+    HAL_GIC_Enable(irq);
 #endif
     RUN_TEST_CASE(HAL_TIMER, TimerInit);
     RUN_TEST_CASE(HAL_TIMER, TimerSetCount);
