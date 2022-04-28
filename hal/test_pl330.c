@@ -48,13 +48,17 @@ static void MEMCPY_Callback(void *cparam)
 TEST(HAL_PL330, MemcpyTest){
     uint32_t ret, i;
     struct PL330_CHAN *pchan;
+    char *buf = malloc(128);
 
+    TEST_ASSERT_NOT_NULL(buf);
     for (i = 0; i < TSIZE; i++) {
         src[i] = i;
     }
 
     pchan = HAL_PL330_RequestChannel(s_pl330, (DMA_REQ_Type)0);
     TEST_ASSERT_NOT_NULL(pchan);
+
+    HAL_PL330_SetMcBuf(pchan, buf);
 
     ret = HAL_PL330_PrepDmaMemcpy(pchan, (uint32_t)&dst, (uint32_t)&src,
                                   TSIZE, MEMCPY_Callback, pchan);
