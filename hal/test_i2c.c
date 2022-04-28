@@ -14,7 +14,7 @@
 /***************************** MACRO Definition ******************************/
 #define ROCKCHIP_I2C_TIMEOUT (1 * 1000)
 
-#define I2C_DEVICE_MAX 6
+#define I2C_BUS_MAX 6
 
 struct I2C_DEVICE_CLASS {
     /* error status */
@@ -46,54 +46,54 @@ struct I2C_DEVICE_CLASS g_I2C##ID##Dev = \
 
 /********************* Private Variable Definition ***************************/
 /* Define I2C resource */
-#ifdef I2C0
+#ifdef HAL_I2C0
 DEFINE_ROCKCHIP_I2C(0)
 #endif
-#ifdef I2C1
+#ifdef HAL_I2C1
 DEFINE_ROCKCHIP_I2C(1)
 #endif
-#ifdef I2C2
+#ifdef HAL_I2C2
 DEFINE_ROCKCHIP_I2C(2)
 #endif
-#ifdef I2C3
+#ifdef HAL_I2C3
 DEFINE_ROCKCHIP_I2C(3)
 #endif
-#ifdef I2C4
+#ifdef HAL_I2C4
 DEFINE_ROCKCHIP_I2C(4)
 #endif
-#ifdef I2C5
+#ifdef HAL_I2C5
 DEFINE_ROCKCHIP_I2C(5)
 #endif
 
 /* Add I2C resource to group */
-struct I2C_DEVICE_CLASS *gI2CDev[I2C_DEVICE_MAX] =
+struct I2C_DEVICE_CLASS *gI2CDev[I2C_BUS_MAX] =
 {
-#ifdef I2C0
+#ifdef HAL_I2C0
     &ROCKCHIP_I2C(0),
 #else
     NULL,
 #endif
-#ifdef I2C1
+#ifdef HAL_I2C1
     &ROCKCHIP_I2C(1),
 #else
     NULL,
 #endif
-#ifdef I2C2
+#ifdef HAL_I2C2
     &ROCKCHIP_I2C(2),
 #else
     NULL,
 #endif
-#ifdef I2C3
+#ifdef HAL_I2C3
     &ROCKCHIP_I2C(3),
 #else
     NULL,
 #endif
-#ifdef I2C4
+#ifdef HAL_I2C4
     &ROCKCHIP_I2C(4),
 #else
     NULL,
 #endif
-#ifdef I2C5
+#ifdef HAL_I2C5
     &ROCKCHIP_I2C(5),
 #else
     NULL,
@@ -204,7 +204,7 @@ static HAL_Status I2C_Init(uint8_t id)
     const struct HAL_I2C_DEV *i2cDev;
     uint32_t freq;
 
-    HAL_ASSERT(id < I2C_DEVICE_MAX);
+    HAL_ASSERT(id < I2C_BUS_MAX);
 
     i2c = gI2CDev[id];
     if (!i2c) {
@@ -220,7 +220,6 @@ static HAL_Status I2C_Init(uint8_t id)
 }
 
 /*************************** I2C TEST ****************************/
-#define I2C_TEST_ID     0
 #define I2C_MAX_DEVICES 16
 static uint16_t i2c_devices[I2C_MAX_DEVICES];
 
@@ -240,7 +239,7 @@ static int32_t I2C_WriteTest(uint8_t id, uint16_t addr,
     struct I2C_MSG msgs[1];
     int32_t ret;
 
-    HAL_ASSERT(id < I2C_DEVICE_MAX);
+    HAL_ASSERT(id < I2C_BUS_MAX);
 
     msgs[0].addr  = addr;
     msgs[0].flags = HAL_I2C_M_WR;
@@ -260,7 +259,7 @@ static int32_t I2C_ReadTest(uint8_t id, uint16_t addr, uint8_t *cmd_buf,
     struct I2C_MSG msgs[2];
     int32_t ret;
 
-    HAL_ASSERT(id < I2C_DEVICE_MAX);
+    HAL_ASSERT(id < I2C_BUS_MAX);
 
     msgs[0].addr  = addr;
     msgs[0].flags = HAL_I2C_M_WR;
@@ -285,10 +284,10 @@ static uint32_t I2C_ScanDevicesTest(uint8_t id)
     struct I2C_MSG msgs[1];
     uint8_t cmd = 0;
 
-    HAL_ASSERT(id < I2C_DEVICE_MAX);
+    HAL_ASSERT(id < I2C_BUS_MAX);
 
     deviceID = 0;
-    memset(i2c_devices, 0, I2C_MAX_DEVICES);
+    memset(i2c_devices, 0, sizeof(i2c_devices));
     printf("     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n");
     for (i = 0; i < 128; i += 16) {
         printf("%02x: ", i);
@@ -321,13 +320,11 @@ static uint32_t I2C_ScanDevicesTest(uint8_t id)
 /* I2C test case 3 */
 static uint32_t I2C_DumpDevicesTest(uint8_t id, uint16_t addr)
 {
-    uint32_t i, j, ret, deviceID;
+    uint32_t i, j, ret;
     uint8_t cmd, data;
 
-    HAL_ASSERT(id < I2C_DEVICE_MAX);
+    HAL_ASSERT(id < I2C_BUS_MAX);
 
-    deviceID = 0;
-    memset(i2c_devices, 0, I2C_MAX_DEVICES);
     printf("     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n");
     for (i = 0; i < 256; i+=16) {
         printf("%02x: ", i);
@@ -342,11 +339,11 @@ static uint32_t I2C_DumpDevicesTest(uint8_t id, uint16_t addr)
         printf("\n");
     }
 
-    return deviceID;
+    return 0;
 }
 
 TEST_GROUP_RUNNER(HAL_I2C) {
-    int32_t id, i = 0, ret;
+    int32_t bus, id, i = 0, ret;
 
     HAL_DBG("\n");
     HAL_DBG("%s\n", __func__);
@@ -354,15 +351,20 @@ TEST_GROUP_RUNNER(HAL_I2C) {
     HAL_DBG("    cpu polling transfer\n");
     HAL_DBG("    Default tests have no tx transfer\n");
 
-    I2C_Init(I2C_TEST_ID);
-    id = I2C_ScanDevicesTest(I2C_TEST_ID);
-    if (id) {
-        for (i = id; i < id; i++)
-            HAL_DBG("Device%d-%02x: ", i, i2c_devices[i]);
-            I2C_DumpDevicesTest(I2C_TEST_ID, i2c_devices[i]);
-    }
+    for (bus = 0; bus < I2C_BUS_MAX; bus++) {
+        if(I2C_Init(bus))
+            continue;
 
-    /* Option test for write */
+        id = I2C_ScanDevicesTest(bus);
+        if (id) {
+            for (i = id; i < id; i++) {
+                printf("Device%d-%02x: \n", i, i2c_devices[i]);
+                /* Option test */
+                I2C_DumpDevicesTest(bus, i2c_devices[i]);
+
+            }
+	}
+    }
 }
 
 #endif
