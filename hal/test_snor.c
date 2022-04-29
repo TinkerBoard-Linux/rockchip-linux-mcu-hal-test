@@ -59,7 +59,7 @@ static HAL_Status SNOR_Adapt(struct SPI_NOR *nor)
     nor->spi->xfer = SPI_Xfer;
 #ifdef HAL_FSPI_DMA_ENABLED
 #if defined(HAL_NVIC_MODULE_ENABLED)
-    HAL_NVIC_ConfigExtIRQ(FSPI0_IRQn, (NVIC_IRQHandler)&FSPI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
+    HAL_NVIC_ConfigExtIRQ(FSPI0_IRQn, (NVIC_IRQHandler) & FSPI_IRQHandler, NVIC_PERIPH_PRIO_DEFAULT, NVIC_PERIPH_SUB_PRIO_DEFAULT);
 #elif defined(HAL_IRQ_HANDLER_MODULE_ENABLED) && defined(HAL_GIC_MODULE_ENABLED)
     HAL_IRQ_HANDLER_SetIRQHandler(FSPI0_IRQn, (HAL_IRQ_HANDLER)&FSPI_IRQHandler, NULL);
     HAL_GIC_Enable(FSPI0_IRQn);
@@ -110,7 +110,7 @@ static HAL_Status SNOR_Adapt(struct SPI_NOR *nor)
     struct HAL_SFC_HOST *host;
 
     /* Designated host to SNOR */
-    host->instance = SFC;
+    host = &g_sfcDev;
     HAL_SFC_Init(host);
     nor->spi->userdata = (void *)host;
     nor->spi->mode = HAL_SPI_MODE_3;
@@ -147,17 +147,13 @@ static HAL_Status SNOR_SINGLE_TEST(void)
     uint32_t testLba = FLASH_SKIP_LBA;
 
     pwrite32[0] = testLba;
+    HAL_SNOR_ReadData(nor, testLba << 9, pwrite32, 0x1000);
     HAL_SNOR_Erase(nor, testLba << 9, ERASE_SECTOR);
     HAL_SNOR_ProgData(nor, testLba << 9, pwrite32, 0x1000);
     memset(pread, 0, 256);
     memset(pread32, 0, 0x1000);
     HAL_DBG("%lx\n", (uint32_t)pread32);
-    for (int i = 0; i < 1024; i++) {
-#ifdef HAL_FSPI_DMA_ENABLED
-        HAL_DCACHE_InvalidateByRange((uint32_t)pread32, 0x1000);
-#endif
-        HAL_SNOR_ReadData(nor, testLba << 9, pread32, 0x1000);
-    }
+    HAL_SNOR_ReadData(nor, testLba << 9, pread32, 0x1000);
 
     for (int32_t i = 0; i < (0x1000 / 4); i++) {
         if (pwrite32[i] != pread32[i]) {
@@ -309,6 +305,14 @@ TEST_TEAR_DOWN(HAL_SNOR){
 }
 
 /* SNOR test case 0 */
+TEST(HAL_SNOR, SnorSingleTest){
+    int32_t ret, testEndLBA;
+
+    ret = SNOR_SINGLE_TEST();
+    TEST_ASSERT(ret == HAL_OK);
+}
+
+/* SNOR test case 1 */
 TEST(HAL_SNOR, SnorStressRandomTest){
     int32_t ret, testEndLBA;
 
@@ -320,7 +324,7 @@ TEST(HAL_SNOR, SnorStressRandomTest){
     TEST_ASSERT(ret == HAL_OK);
 }
 
-/* SNOR test case 1 */
+/* SNOR test case 2 */
 #ifdef HAL_FSPI_XIP_ENABLE
 TEST(HAL_SNOR, SnorXIPRandomTest){
     int32_t ret, testEndLBA;
@@ -346,7 +350,7 @@ TEST_GROUP_RUNNER(HAL_SNOR){
     TEST_ASSERT_NOT_NULL(pread_t);
     pwrite = AlignUp(pwrite_t, 64);
     pread = AlignUp(pread_t, 64);
-    HAL_DBG("pwrite %p pread %p\n", pwrite, pread);
+    HAL_DBG("%s pwrite %p pread %p\n", __func__, pwrite, pread);
 
     spi = &nor_spi_buf;
     memset(spi, 0, sizeof(struct SNOR_HOST));
@@ -362,7 +366,8 @@ TEST_GROUP_RUNNER(HAL_SNOR){
     TEST_ASSERT(ret == HAL_OK);
 #endif
 
-    RUN_TEST_CASE(HAL_SNOR, SnorStressRandomTest);
+    RUN_TEST_CASE(HAL_SNOR, SnorSingleTest);
+    /* RUN_TEST_CASE(HAL_SNOR, SnorStressRandomTest); */
 #ifdef HAL_FSPI_XIP_ENABLE
     RUN_TEST_CASE(HAL_SNOR, SnorXIPRandomTest);
 #endif
