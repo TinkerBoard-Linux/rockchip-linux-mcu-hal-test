@@ -567,7 +567,7 @@ static HAL_Status SPI_Init(uint8_t id)
 
 /*************************** SPI TEST ****************************/
 /* Test-config */
-#define SPI_TEST_ID   0
+#define SPI_TEST_ID 0
 
 #define SPI_TEST_SIZE 4096
 static uint8_t tx_buf[2 * SPI_TEST_SIZE];
@@ -646,6 +646,7 @@ TEST_GROUP_RUNNER(HAL_SPI){
     HAL_DBG("    dma transfer        : size > HAL_SPI_DMA_SIZE_MIN\n");
     HAL_DBG("    cpu polling transfer: size <= HAL_SPI_DMA_SIZE_MIN\n");
     HAL_DBG("    HAL_SPI_DMA_SIZE_MIN currently equals 512B\n");
+    HAL_DBG("    Test SPI%d cs0!!!!\n", SPI_TEST_ID);
 
     tx = (uint8_t *)(((uint32_t)&tx_buf + 0x3f) & (~0x3f));
     rx = (uint8_t *)(((uint32_t)&rx_buf + 0x3f) & (~0x3f));
@@ -655,6 +656,7 @@ TEST_GROUP_RUNNER(HAL_SPI){
 
     SPI_Init(SPI_TEST_ID);
 
+    HAL_DBG("If loop at \"[HAL INFO] SPI0 loop test, size=1\", check iomux and clock enable\n");
     SPI_LoopTest(1);
     SPI_LoopTest(31);
     SPI_LoopTest(32);
