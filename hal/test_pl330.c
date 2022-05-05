@@ -24,7 +24,7 @@ TEST_SETUP(HAL_PL330){
 TEST_TEAR_DOWN(HAL_PL330){
 }
 
-#ifdef HAL_NVIC_MODULE_ENABLED
+#if defined(HAL_NVIC_MODULE_ENABLED) || defined(HAL_GIC_MODULE_ENABLED)
 static void HAL_PL330_Handler(void)
 {
     HAL_PL330_IrqHandler(s_pl330);
@@ -48,7 +48,7 @@ static void MEMCPY_Callback(void *cparam)
 TEST(HAL_PL330, MemcpyTest){
     uint32_t ret, i;
     struct PL330_CHAN *pchan;
-    char *buf = malloc(128);
+    char *buf = malloc(PL330_CHAN_BUF_LEN);
 
     TEST_ASSERT_NOT_NULL(buf);
     for (i = 0; i < TSIZE; i++) {
@@ -60,7 +60,7 @@ TEST(HAL_PL330, MemcpyTest){
 
     HAL_PL330_SetMcBuf(pchan, buf);
 
-    ret = HAL_PL330_PrepDmaMemcpy(pchan, (uint32_t)&dst, (uint32_t)&src,
+    ret = HAL_PL330_PrepDmaMemcpy(pchan, (uint32_t)dst, (uint32_t)src,
                                   TSIZE, MEMCPY_Callback, pchan);
     TEST_ASSERT(ret == HAL_OK);
 
@@ -87,9 +87,14 @@ TEST_GROUP_RUNNER(HAL_PL330){
     dst = (uint8_t *)malloc(TSIZE);
     TEST_ASSERT_NOT_NULL(dst);
 
-#ifdef HAL_NVIC_MODULE_ENABLED
+#if defined(HAL_NVIC_MODULE_ENABLED)
     HAL_NVIC_SetIRQHandler(pl330->irq[0], (NVIC_IRQHandler) & HAL_PL330_Handler);
     HAL_NVIC_SetIRQHandler(pl330->irq[1], (NVIC_IRQHandler) & HAL_PL330_Handler);
+#elif defined(HAL_GIC_MODULE_ENABLED)
+    HAL_IRQ_HANDLER_SetIRQHandler(pl330->irq[0], HAL_PL330_Handler, NULL);
+    HAL_IRQ_HANDLER_SetIRQHandler(pl330->irq[1], HAL_PL330_Handler, NULL);
+    HAL_GIC_Enable(pl330->irq[0]);
+    HAL_GIC_Enable(pl330->irq[1]);
 #endif
 
     RUN_TEST_CASE(HAL_PL330, MemcpyTest);
