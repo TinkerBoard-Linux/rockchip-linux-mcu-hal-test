@@ -310,7 +310,7 @@ static int SPI_DmaPrepare(struct SPI_DEVICE_CLASS *spi, struct RK_SPI_MESSAGE *m
                                 SPI_DmaTxCb, spi);
         HAL_PL330_SetMcBuf(spi->dmaTxChan, &mcrTxBuf);
 #ifdef HAL_DCACHE_MODULE_ENABLED
-        HAL_DCACHE_CleanByRange((uint32_t)message->send_buf, message->length);
+        HAL_DCACHE_CleanByRange((uint32_t)message->sendBuf, message->length);
 #endif
     }
 
@@ -395,7 +395,7 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
 
         if (message->recvBuf) {
 #ifdef HAL_DCACHE_MODULE_ENABLED
-            HAL_DCACHE_CleanByRange((uint32_t)message->send_buf, message->length);
+            HAL_DCACHE_CleanByRange((uint32_t)message->sendBuf, message->length);
 #endif
             HAL_PL330_Stop(spi->dmaRxChan);
             HAL_PL330_ReleaseChannel(spi->dmaRxChan);
