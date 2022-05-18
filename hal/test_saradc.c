@@ -18,7 +18,7 @@ TEST_GROUP_RUNNER(HAL_SARADC) {
     while (1) {
         HAL_SARADC_Start(SARADC, SARADC_INT_MOD, channel);
         HAL_DelayMs(500);
-        val = HAL_SARADC_GetRaw(SARADC);
+        val = HAL_SARADC_GetRaw(SARADC, channel);
         HAL_DBG("saradc val = %d\n", val);
         HAL_SARADC_Stop(SARADC);
     }
