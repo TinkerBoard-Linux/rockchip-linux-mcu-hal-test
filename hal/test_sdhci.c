@@ -8,7 +8,7 @@
 #include "unity.h"
 #include "unity_fixture.h"
 
-#if defined(UNITY_MID_SDHCI) && defined(DRIVERS_SDHCI)
+#if defined(UNITY_MID_SDHCI) && defined(HAL_PL330_MODULE_ENABLED) && defined(DRIVERS_SDHCI)
 #include "mmc_api.h"
 
 #define TestSector   8
