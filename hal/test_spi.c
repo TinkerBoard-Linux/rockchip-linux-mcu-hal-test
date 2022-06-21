@@ -1,21 +1,20 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
  */
 
 #include "hal_bsp.h"
 #include "hal_base.h"
 #include "unity.h"
 #include "unity_fixture.h"
+#include "test_spi.h"
 
-#if defined(HAL_SPI_MODULE_ENABLED) && defined(HAL_PL330_MODULE_ENABLED) && defined(UNITY_HAL_SPI)
+#if defined(HAL_SPI_MODULE_ENABLED) && defined(UNITY_HAL_SPI)
 /*************************** SPI DRIVER ****************************/
 
 /***************************** MACRO Definition ******************************/
-#define ROCKCHIP_SPI_SPEED_DEFAULT 10000000
 
-#define SPI_DEVICE_MAX 4
-#define SPI_MAX_CH     2
+/***************************** Structure Definition **************************/
 
 struct SPI_DEVICE_CLASS {
     /* status */
@@ -26,72 +25,15 @@ struct SPI_DEVICE_CLASS {
     const struct HAL_SPI_DEV *halDev;
     uint32_t state;
 
+#ifdef HAL_PL330_MODULE_ENABLED
     /* dma */
     uint32_t dmaBurstSize;
     struct PL330_CHAN *dmaRxChan;
     struct PL330_CHAN *dmaTxChan;
+#endif
 };
-
-/* RK_SPI_CONFIG mode */
-#define RK_SPI_CPHA (1<<0)                         /* bit[0]:CPHA, clock phase */
-#define RK_SPI_CPOL (1<<1)                         /* bit[1]:CPOL, clock polarity */
-/**
- * At CPOL=0 the base value of the clock is zero
- *  - For CPHA=0, data are captured on the clock's rising edge (low->high transition)
- *    and data are propagated on a falling edge (high->low clock transition).
- *  - For CPHA=1, data are captured on the clock's falling edge and data are
- *    propagated on a rising edge.
- * At CPOL=1 the base value of the clock is one (inversion of CPOL=0)
- *  - For CPHA=0, data are captured on clock's falling edge and data are propagated
- *    on a rising edge.
- *  - For CPHA=1, data are captured on clock's rising edge and data are propagated
- *    on a falling edge.
- */
-#define RK_SPI_MODE_0    (0 | 0)                        /* CPOL = 0, CPHA = 0 */
-#define RK_SPI_MODE_1    (0 | RK_SPI_CPHA)              /* CPOL = 0, CPHA = 1 */
-#define RK_SPI_MODE_2    (RK_SPI_CPOL | 0)              /* CPOL = 1, CPHA = 0 */
-#define RK_SPI_MODE_3    (RK_SPI_CPOL | RK_SPI_CPHA)    /* CPOL = 1, CPHA = 1 */
-#define RK_SPI_MODE_MASK (RK_SPI_CPHA | RK_SPI_CPOL | RK_SPI_MSB)
-
-#define RK_SPI_LSB (0<<2)                         /* bit[2]: 0-LSB */
-#define RK_SPI_MSB (1<<2)                         /* bit[2]: 1-MSB */
-
-#define RK_SPI_MASTER (0<<3)                         /* SPI master device */
-#define RK_SPI_SLAVE  (1<<3)                         /* SPI slave device */
-
-#define RK_SPI_CSM_SHIFT (4)
-#define RK_SPI_CSM_MASK  (0x3 << 4)                     /* SPI master ss_n hold cycles for MOTO SPI master */
-
-/* Rockchip SPI configuration */
-struct RK_SPI_CONFIG {
-    uint8_t mode;
-    uint8_t dataWidth;
-    uint8_t reserved;
-
-    uint32_t maxHz;
-};
-
-/* Rockchip SPI xfer massage */
-struct RK_SPI_MESSAGE {
-    uint32_t ch;
-    const void *sendBuf;
-    void *recvBuf;
-    uint32_t length;
-
-    unsigned csTake    : 1;
-    unsigned csRelease : 1;
-};
-
-/***************************** Structure Definition **************************/
 
 /***************************** Function Declare ******************************/
-static HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *config);
-static uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length);
-static uint32_t SPI_Write(uint8_t id, uint8_t cs, const void *sendBuf, uint32_t length);
-static uint32_t SPI_Read(uint8_t id, uint8_t cs, void *recvBuf, uint32_t length);
-static HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1);
-static HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1);
-static HAL_Status SPI_Init(uint8_t id);
 
 /********************* Private MACRO Definition ******************************/
 
@@ -113,9 +55,11 @@ struct SPI_DEVICE_CLASS gSpiDev##ID = \
 /********************* Private Structure Definition **************************/
 
 /********************* Private Variable Definition ***************************/
+#ifdef HAL_PL330_MODULE_ENABLED
 static struct HAL_PL330_DEV *s_pl330;
 static uint8_t mcrTxBuf[PL330_CHAN_BUF_LEN];
 static uint8_t mcrRxBuf[PL330_CHAN_BUF_LEN];
+#endif
 
 /* Define SPI resource */
 #ifdef SPI0
@@ -160,7 +104,7 @@ struct SPI_DEVICE_CLASS *gSpiDev[SPI_DEVICE_MAX] =
 
 /********************* Public Function Definition ****************************/
 
-static HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
+HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
 {
     struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiDev[id];
     struct SPI_HANDLE *pSPI = &spi->instance;
@@ -236,6 +180,7 @@ static HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
     return HAL_OK;
 }
 
+#ifdef HAL_PL330_MODULE_ENABLED
 static uint32_t SPI_CalcBurstSize(uint32_t data_len)
 {
     uint32_t i;
@@ -328,6 +273,7 @@ static int SPI_DmaPrepare(struct SPI_DEVICE_CLASS *spi, struct RK_SPI_MESSAGE *m
 
     return ret;
 }
+#endif
 
 static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
 {
@@ -348,6 +294,7 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
     }
 
     /* Use poll mode for master while less fifo length. */
+#ifdef HAL_PL330_MODULE_ENABLED
     if (HAL_SPI_CanDma(pSPI)) {
         spi->dmaBurstSize = 1;
         pSPI->dmaBurstSize = spi->dmaBurstSize;
@@ -401,6 +348,9 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
             HAL_PL330_ReleaseChannel(spi->dmaRxChan);
         }
     } else {
+#else
+    if (1) {
+#endif
         HAL_SPI_PioTransfer(pSPI);
         /* If tx, wait until the FIFO data completely. */
         if (message->sendBuf) {
@@ -410,7 +360,6 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
                 if (ret == HAL_OK) {
                     break;
                 }
-                HAL_DBG("%s %d\n", __func__, __LINE__);
             } while (timeout > HAL_GetTick());
         }
     }
@@ -449,21 +398,21 @@ static uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *
     return ret;
 }
 
-static uint32_t SPI_Read(uint8_t id, uint8_t ch, void *recvBuf, uint32_t length)
+uint32_t SPI_Read(uint8_t id, uint8_t ch, void *recvBuf, uint32_t length)
 {
     HAL_ASSERT(id < SPI_DEVICE_MAX);
 
     return SPI_Transfer(id, ch, NULL, recvBuf, length);
 }
 
-static uint32_t SPI_Write(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t length)
+uint32_t SPI_Write(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t length)
 {
     HAL_ASSERT(id < SPI_DEVICE_MAX);
 
     return SPI_Transfer(id, ch, sendBuf, NULL, length);
 }
 
-static HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1)
+HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1)
 {
     HAL_Status ret = HAL_OK;
     struct RK_SPI_MESSAGE message;
@@ -503,7 +452,7 @@ out:
     return ret;
 }
 
-static HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
+HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
 {
     HAL_Status ret = HAL_OK;
     uint32_t retSize;
@@ -542,12 +491,14 @@ out:
     return ret;
 }
 
-static HAL_Status SPI_Init(uint8_t id)
+HAL_Status SPI_Init(uint8_t id)
 {
     struct SPI_DEVICE_CLASS *spi;
     struct RK_SPI_CONFIG config;
 
     HAL_ASSERT(id < SPI_DEVICE_MAX);
+
+    memset(&config, 0, sizeof(struct RK_SPI_CONFIG));
 
     spi = gSpiDev[id];
     if (!spi) {
@@ -567,7 +518,7 @@ static HAL_Status SPI_Init(uint8_t id)
 
 /*************************** SPI TEST ****************************/
 /* Test-config */
-#define SPI_TEST_ID 0
+#define SPI_TEST_ID 1
 
 #define SPI_TEST_SIZE 4096
 static uint8_t tx_buf[2 * SPI_TEST_SIZE];
@@ -638,7 +589,12 @@ static void SPI_ReadTest(uint16_t size)
 }
 
 TEST_GROUP_RUNNER(HAL_SPI){
+#ifdef HAL_PL330_MODULE_ENABLED
     struct HAL_PL330_DEV *pl330 = &g_pl330Dev0;
+
+    HAL_PL330_Init(pl330);
+    s_pl330 = pl330;
+#endif
 
     HAL_DBG("\n");
     HAL_DBG("%s\n", __func__);
@@ -650,9 +606,6 @@ TEST_GROUP_RUNNER(HAL_SPI){
 
     tx = (uint8_t *)(((uint32_t)&tx_buf + 0x3f) & (~0x3f));
     rx = (uint8_t *)(((uint32_t)&rx_buf + 0x3f) & (~0x3f));
-
-    HAL_PL330_Init(pl330);
-    s_pl330 = pl330;
 
     SPI_Init(SPI_TEST_ID);
 
@@ -667,8 +620,6 @@ TEST_GROUP_RUNNER(HAL_SPI){
     SPI_WriteTest(1024);
     SPI_ReadTest(32);
     SPI_ReadTest(1024);
-
-    HAL_PL330_DeInit(pl330);
 }
 
 #endif
