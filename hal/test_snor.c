@@ -66,6 +66,12 @@ static HAL_Status SNOR_Adapt(struct SPI_NOR *nor)
 #endif
 #endif
 
+
+#ifdef HAL_CRU_MODULE_ENABLED
+    /* Set FSPI clock rate, If higher than 50MHz, Enable UNITY_HAL_FSPI_TUNING_TEST for dll, io clk is equash to sclk rate */
+    HAL_CRU_ClkSetFreq(host->sclkID, 50000000);
+#endif
+
 #ifdef UNITY_HAL_FSPI_TUNING_TEST
     uint8_t idByte[5];
     uint32_t i, j;
