@@ -51,6 +51,9 @@ static void RunAllTests(void)
 #ifdef HAL_SARADC_MODULE_ENABLED
     RUN_TEST_GROUP(HAL_SARADC);
 #endif
+#ifdef HAL_PCIE_MODULE_ENABLED
+    RUN_TEST_GROUP(HAL_PCIE);
+#endif
 }
 
 int test_main(void)
