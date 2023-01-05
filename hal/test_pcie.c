@@ -96,7 +96,7 @@ TEST(HAL_PCIE, DemoSimpleTest){
 
     /* DMA write test */
     memset(&table, 0, sizeof(struct DMA_TABLE));
-    table.buf_size = TEST_PCIE_DMA_SIZE;
+    table.bufSize = TEST_PCIE_DMA_SIZE;
     table.bus = TEST_PCIE_DMA_BUS_ADDR;
     table.local = TEST_PCIE_DMA_LOCAL_ADDR;
     table.chn = TEST_PCIE_DMA_CHAN;
@@ -110,7 +110,7 @@ TEST(HAL_PCIE, DemoSimpleTest){
 
     /* DMA read test */
     memset(&table, 0, sizeof(struct DMA_TABLE));
-    table.buf_size = TEST_PCIE_DMA_SIZE;
+    table.bufSize = TEST_PCIE_DMA_SIZE;
     table.bus = TEST_PCIE_DMA_BUS_ADDR;
     table.local = TEST_PCIE_DMA_LOCAL_ADDR;
     table.chn = TEST_PCIE_DMA_CHAN;
