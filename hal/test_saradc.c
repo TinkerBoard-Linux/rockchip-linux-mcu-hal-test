@@ -16,11 +16,19 @@ TEST_GROUP_RUNNER(HAL_SARADC) {
     int32_t val, loop = 0;
 
     while (++loop < 10) {
+#ifdef SARADC0
+        HAL_SARADC_Start(SARADC0, SARADC_INT_MOD, channel);
+        HAL_DelayMs(500);
+        val = HAL_SARADC_GetRaw(SARADC0, channel);
+        HAL_DBG("saradc val = %d\n", val);
+        HAL_SARADC_Stop(SARADC0);
+#else
         HAL_SARADC_Start(SARADC, SARADC_INT_MOD, channel);
         HAL_DelayMs(500);
         val = HAL_SARADC_GetRaw(SARADC, channel);
         HAL_DBG("saradc val = %d\n", val);
         HAL_SARADC_Stop(SARADC);
+#endif
     }
 }
 
