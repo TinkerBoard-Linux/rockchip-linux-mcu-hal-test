@@ -13,6 +13,7 @@
 /*************************** SPI DRIVER ****************************/
 
 /***************************** MACRO Definition ******************************/
+#define SPI_MAX_SCLK_RATE 200000000
 
 /***************************** Structure Definition **************************/
 
@@ -150,6 +151,7 @@ HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
     /* CSM cycles */
     pSPIConfig->csm = CR0_CSM((configuration->mode & RK_SPI_CSM_MASK) >> RK_SPI_CSM_SHIFT);
 
+#ifdef HAL_CRU_MODULE_ENABLED
     pSPI->maxFreq = HAL_CRU_ClkGetFreq(spi->halDev->clkId);
     pSPIConfig->speed = configuration->maxHz;
 
@@ -176,6 +178,10 @@ HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
             HAL_DBG("SPI SCLK is in maxFreq %ldHz in slave mode\n", pSPI->maxFreq);
         }
     }
+#else
+    pSPI->maxFreq = SPI_MAX_SCLK_RATE;
+    pSPIConfig->speed = configuration->maxHz;
+#endif
 
     return HAL_OK;
 }
@@ -281,7 +287,9 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
     struct SPI_HANDLE *pSPI = &spi->instance;
     uint64_t timeout;
     HAL_Status ret = HAL_OK;
+#ifdef HAL_PL330_MODULE_ENABLED
     uint32_t start, timeoutMs;
+#endif
 
     HAL_ASSERT((message->sendBuf != NULL) || (message->recvBuf != NULL));
 
@@ -455,7 +463,6 @@ out:
 HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
 {
     HAL_Status ret = HAL_OK;
-    uint32_t retSize;
     struct RK_SPI_MESSAGE message;
 
     HAL_ASSERT(id < SPI_DEVICE_MAX);
