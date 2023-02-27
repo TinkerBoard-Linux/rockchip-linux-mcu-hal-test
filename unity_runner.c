@@ -54,6 +54,9 @@ static void RunAllTests(void)
 #ifdef HAL_PCIE_MODULE_ENABLED
     RUN_TEST_GROUP(HAL_PCIE);
 #endif
+#if (defined(HAL_GMAC_MODULE_ENABLED) || defined(HAL_GMAC1000_MODULE_ENABLED)) && defined(UNITY_HAL_GMAC)
+    RUN_TEST_GROUP(HAL_GMAC);
+#endif
 }
 
 int test_main(void)
