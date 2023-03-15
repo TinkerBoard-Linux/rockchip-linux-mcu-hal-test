@@ -43,7 +43,7 @@ struct SPI_DEVICE_CLASS {
                                       \
 struct SPI_DEVICE_CLASS gSpiDev##ID = \
 {                                     \
-    .halDev = &g_spiDev##ID,          \
+    .halDev = &g_spi##ID##Dev,          \
 };                                    \
 
 #define ROCKCHIP_SPI(ID) gSpiDev##ID
