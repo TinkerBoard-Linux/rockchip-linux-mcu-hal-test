@@ -10,6 +10,8 @@
 
 #if defined(HAL_PCIE_MODULE_ENABLED)
 
+static struct HAL_PCIE_HANDLE s_pcieHandle;
+
 static int PCIE_WaitForLinkUp(struct HAL_PCIE_HANDLE *pcie)
 {
     int retries;
@@ -53,11 +55,11 @@ static int PCIE_WaitForDmaFinished(struct HAL_PCIE_HANDLE *pcie, struct DMA_TABL
     return -1;
 }
 
-static int PCIE_Init(struct HAL_PCIE_HANDLE *pcie)
+static int PCIE_Init(struct HAL_PCIE_HANDLE *pcie, struct HAL_PCIE_DEV *dev)
 {
     int ret;
 
-    HAL_PCIE_Init(pcie);
+    HAL_PCIE_Init(pcie, dev);
 
     ret = PCIE_WaitForLinkUp(pcie);
     if (ret) {
@@ -91,7 +93,7 @@ TEST(HAL_PCIE, DemoSimpleTest){
 
     printf("PCIe Test\n");
 
-    ret = PCIE_Init(&g_pcieDev);
+    ret = PCIE_Init(&s_pcieHandle, &g_pcieDev);
     TEST_ASSERT(ret == 0);
 
     /* DMA write test */
@@ -102,9 +104,9 @@ TEST(HAL_PCIE, DemoSimpleTest){
     table.chn = TEST_PCIE_DMA_CHAN;
     table.dir = DMA_TO_BUS;
 
-    HAL_PCIE_ConfigDma(&g_pcieDev, &table);
-    HAL_PCIE_StartDma(&g_pcieDev, &table);
-    ret = PCIE_WaitForDmaFinished(&g_pcieDev, &table);
+    HAL_PCIE_ConfigDma(&s_pcieHandle, &table);
+    HAL_PCIE_StartDma(&s_pcieHandle, &table);
+    ret = PCIE_WaitForDmaFinished(&s_pcieHandle, &table);
     TEST_ASSERT(ret == 0);
     printf("PCIe DMA wr success\n");
 
@@ -116,9 +118,9 @@ TEST(HAL_PCIE, DemoSimpleTest){
     table.chn = TEST_PCIE_DMA_CHAN;
     table.dir = DMA_FROM_BUS;
 
-    HAL_PCIE_ConfigDma(&g_pcieDev, &table);
-    HAL_PCIE_StartDma(&g_pcieDev, &table);
-    ret = PCIE_WaitForDmaFinished(&g_pcieDev, &table);
+    HAL_PCIE_ConfigDma(&s_pcieHandle, &table);
+    HAL_PCIE_StartDma(&s_pcieHandle, &table);
+    ret = PCIE_WaitForDmaFinished(&s_pcieHandle, &table);
     TEST_ASSERT(ret == 0);
     printf("PCIe DMA rd success\n");
 }
