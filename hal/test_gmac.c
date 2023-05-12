@@ -85,9 +85,9 @@ struct GMAC_ETH_CONFIG {
 
 /********************* Private Variable Definition ***************************/
 #ifdef NC_MEM_BASE
-const unsigned long os_no_cache_start = (unsigned long)NC_MEM_BASE;
+static const unsigned long os_no_cache_start = (unsigned long)NC_MEM_BASE;
 #else
-const unsigned long os_no_cache_start = 0;
+static const unsigned long os_no_cache_start = 0;
 #endif
 
 /*
@@ -283,8 +283,8 @@ static void PHY_Dump(struct GMAC_ETH_CONFIG *eth, struct GMAC_HANDLE *pGMAC)
 static void GMAC_PHY_Reset(struct GMAC_ETH_CONFIG *config)
 {
     if (config->resetGpioBank) {
-        HAL_GPIO_SetPinDirection(GPIO2,
-                                 GPIO_PIN_B5,
+        HAL_GPIO_SetPinDirection(config->resetGpioBank,
+                                 config->resetGpioNum,
                                  GPIO_OUT);
         HAL_GPIO_SetPinLevel(config->resetGpioBank,
                              config->resetGpioNum,
@@ -292,13 +292,13 @@ static void GMAC_PHY_Reset(struct GMAC_ETH_CONFIG *config)
 
         HAL_DelayMs(config->resetDelayMs[0]);
 
-        HAL_GPIO_SetPinLevel(GPIO2,
-                             GPIO_PIN_B5,
+        HAL_GPIO_SetPinLevel(config->resetGpioBank,
+                             config->resetGpioNum,
                              GPIO_LOW);
         HAL_DelayMs(config->resetDelayMs[1]);
 
-        HAL_GPIO_SetPinLevel(GPIO2,
-                             GPIO_PIN_B5,
+        HAL_GPIO_SetPinLevel(config->resetGpioBank,
+                             config->resetGpioNum,
                              GPIO_HIGH);
         HAL_DelayMs(config->resetDelayMs[2]);
     }
@@ -642,14 +642,18 @@ static void GMAC0_Iomux_Config(void)
 {
     /* GMAC0 iomux */
     HAL_PINCTRL_SetIOMUX(GPIO_BANK2,
+                         GPIO_PIN_B6, /* gmac0_rxd0 */
+                         PIN_CONFIG_MUX_FUNC1);
+
+    HAL_PINCTRL_SetIOMUX(GPIO_BANK2,
                          GPIO_PIN_C3 | /* gmac0_mdc */
                          GPIO_PIN_C4 | /* gmac0_mdio */
                          GPIO_PIN_C0 | /* gmac0_rxdvcrs */
                          GPIO_PIN_B7 | /* gmac0_rxd1 */
                          GPIO_PIN_A3 | /* gmac0_rxd2 */
                          GPIO_PIN_A4 | /* gmac0_rxd3 */
-                         GPIO_PIN_A6 | /* gmac0_rxclk */
-                         GPIO_PIN_A7 | /* gmac0_txclk */
+                         GPIO_PIN_A6 | /* gmac0_txd2 */
+                         GPIO_PIN_A7 | /* gmac0_txd3 */
                          GPIO_PIN_A5,  /* gmac0_rxclk */
                          PIN_CONFIG_MUX_FUNC2);
 
@@ -664,7 +668,19 @@ static void GMAC0_Iomux_Config(void)
                          GPIO_PIN_A6,  /* gmac0_txd2 */
                          PIN_CONFIG_MUX_FUNC2 | PIN_CONFIG_DRV_LEVEL2);
     HAL_PINCTRL_SetIOMUX(GPIO_BANK2,   /* gmac0_txclk */
+                         PIO_PIN_B0,
                          PIN_CONFIG_MUX_FUNC2 | PIN_CONFIG_DRV_LEVEL1);
+
+#if 0
+    /* io-domian: 1.8v or 3.3v for vccio4 */
+	WRITE_REG_MASK_WE(GRF->IO_VSEL0,
+	                  GRF_IO_VSEL0_POC_VCCIO4_SEL18_MASK,
+	                  (1 << GRF_IO_VSEL0_POC_VCCIO4_SEL18_SHIFT));
+
+	WRITE_REG_MASK_WE(GRF->IO_VSEL1,
+	                  GRF_IO_VSEL1_POC_VCCIO4_SEL33_MASK,
+	                  (0 << GRF_IO_VSEL1_POC_VCCIO4_SEL33_SHIFT));
+#endif
 }
 #endif
 
@@ -703,15 +719,26 @@ static void GMAC1_M1_Iomux_Config(void)
                          PIN_CONFIG_MUX_FUNC3 | PIN_CONFIG_DRV_LEVEL2);
 
     HAL_PINCTRL_IOFuncSelForGMAC1(IOFUNC_SEL_M1);
+
+#if 0
+    /* io-domian: 1.8v or 3.3v for vccio6 */
+    WRITE_REG_MASK_WE(GRF->IO_VSEL0,
+	              GRF_IO_VSEL0_POC_VCCIO6_SEL18_MASK,
+	              (1 << GRF_IO_VSEL0_POC_VCCIO6_SEL18_SHIFT));
+
+    WRITE_REG_MASK_WE(GRF->IO_VSEL1,
+	              GRF_IO_VSEL1_POC_VCCIO6_SEL33_MASK,
+	              (0 << GRF_IO_VSEL1_POC_VCCIO6_SEL33_SHIFT));
+#endif
 }
 #endif
 
 static void GMAC_Iomux_Config(uint8_t id)
 {
     if (id == 1) {
-        GMAC1_Iomux_Config();
-    } else if (id == 0) {
         GMAC1_M1_Iomux_Config();
+    } else if (id == 0) {
+        GMAC0_Iomux_Config();
     }
 }
 #endif
