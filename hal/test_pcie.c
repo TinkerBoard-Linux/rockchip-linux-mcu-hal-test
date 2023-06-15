@@ -199,7 +199,7 @@ TEST(HAL_PCIE, PCIeCPUSimpleTest){
     printf("PCIe CPU test:");
     printf("check the bdf of TEST_DEVICE first, change it if need!\n");
 
-    index = HAL_PCIE_OutboundConfigCFG0(&g_pcieDev, TEST_DEVICE, 0x100000);
+    index = HAL_PCIE_OutboundConfigCFG0(&s_pcieHandle, TEST_DEVICE, 0x100000);
     printf("cfg address=%lx, atu_index=%d\n", cfg, index);
     HAL_PCI_ReadConfigWord(cfg, PCI_VENDOR_ID, &vid);
     HAL_PCI_ReadConfigWord(cfg, PCI_DEVICE_ID, &did);
