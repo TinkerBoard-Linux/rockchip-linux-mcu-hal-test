@@ -65,6 +65,8 @@ struct GMAC_ETH_CONFIG {
     uint32_t maxSpeed;
     uint16_t phyAddr;
 
+    bool extClk;
+
     /* phy reset gpio */
     struct GPIO_REG *resetGpioBank;
     ePINCTRL_GPIO_PINS resetGpioNum;
@@ -112,6 +114,8 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
         .maxSpeed = 1000,
         .phyAddr = 1,
 
+        .extClk = false,
+
         .resetGpioBank = GPIO2,
         .resetGpioNum = GPIO_PIN_D3,
         .resetDelayMs = { 0, 20, 100 },
@@ -127,6 +131,8 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
         .mode = PHY_INTERFACE_MODE_RGMII,
         .maxSpeed = 1000,
         .phyAddr = 1,
+
+        .extClk = false,
 
         .resetGpioBank = GPIO2,
         .resetGpioNum = GPIO_PIN_D1,
@@ -149,6 +155,8 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
         .maxSpeed = 100,
         .speed = 100,
         .phyAddr = 0,
+
+        .extClk = false,
 
         .resetGpioBank = GPIO2,
         .resetGpioNum = GPIO_PIN_B5,
@@ -606,7 +614,7 @@ static HAL_Status GMAC_Init(uint8_t id)
     }
 
     freq = HAL_CRU_ClkGetFreq(gmacDev->pclkID);
-    HAL_GMAC_Init(pGMAC, gmacDev->pReg, freq, interface);
+    HAL_GMAC_Init(pGMAC, gmacDev->pReg, freq, interface, eth->extClk);
 
     /* PHY Init */
     config.speed = eth->speed;
