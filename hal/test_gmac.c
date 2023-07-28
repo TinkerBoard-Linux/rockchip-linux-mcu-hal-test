@@ -104,7 +104,7 @@ static unsigned int m_nocachemem_inited = 0;
 
 static uint8_t dstAddr[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-#if defined(HAL_GMAC_MODULE_ENABLED) || defined(SOC_RK3568)
+#if defined(HAL_GMAC_MODULE_ENABLED) && defined(SOC_RK3568)
 static struct GMAC_ETH_CONFIG ethConfigTable[] =
 {
 #ifdef HAL_GMAC0
@@ -145,7 +145,7 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
 };
 #endif
 
-#if defined(HAL_GMAC1000_MODULE_ENABLED) || defined(SOC_RK3358)
+#if defined(HAL_GMAC1000_MODULE_ENABLED) && defined(SOC_RK3358)
 static struct GMAC_ETH_CONFIG ethConfigTable[] =
 {
 #ifdef HAL_GMAC0
@@ -160,6 +160,27 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
 
         .resetGpioBank = GPIO2,
         .resetGpioNum = GPIO_PIN_B5,
+        .resetDelayMs = { 0, 50, 50 },
+    },
+#endif
+};
+#endif
+
+#if defined(HAL_GMAC1000_MODULE_ENABLED) && defined(SOC_RK3308)
+static struct GMAC_ETH_CONFIG ethConfigTable[] =
+{
+#ifdef HAL_GMAC0
+    {
+        .halDev = &g_gmac0Dev,
+        .mode = PHY_INTERFACE_MODE_RMII,
+        .maxSpeed = 100,
+        .speed = 100,
+        .phyAddr = 0,
+
+        .extClk = true,
+
+        .resetGpioBank = GPIO4,
+        .resetGpioNum = GPIO_PIN_C0,
         .resetDelayMs = { 0, 50, 50 },
     },
 #endif
@@ -780,6 +801,37 @@ static void GMAC_Iomux_Config(uint8_t id)
 }
 #endif
 #endif
+
+#ifdef SOC_RK3308
+#ifdef HAL_GMAC0
+/**
+ * @brief  Config iomux for GMAC0
+ */
+static void GMAC_Iomux_Config(uint8_t id)
+{
+    /* GMAC0 iomux */
+    HAL_PINCTRL_SetIOMUX(GPIO_BANK4,
+                         GPIO_PIN_A0 | /* gmac0_rxer_m1 */
+                         GPIO_PIN_A1 | /* gmac0_rxdv_m1 */
+                         GPIO_PIN_A2 | /* gmac0_rxd0_m1 */
+                         GPIO_PIN_A3 | /* gmac0_rxd1_m1 */
+                         GPIO_PIN_A4 | /* gmac0_txd0_m1 */
+                         GPIO_PIN_A5 | /* gmac0_txd1_m1 */
+                         GPIO_PIN_B4 | /* gmac0_clk_m1 */
+                         GPIO_PIN_B5 | /* gmac0_mdc_m1 */
+                         GPIO_PIN_B6 | /* gmac0_mdio_m1 */
+                         GPIO_PIN_B7,  /* gmac0_txen_m1 */
+                         PIN_CONFIG_MUX_FUNC2);
+
+    /* set GMAC IOMUX selection to M1 */
+    WRITE_REG_MASK_WE(GRF->SOC_CON5,
+                      GRF_SOC_CON5_GRF_MAC_MULTI_IOFUNC_SRC_SEL_MASK,
+                      (1 << GRF_SOC_CON5_GRF_MAC_MULTI_IOFUNC_SRC_SEL_SHIFT));
+}
+#endif
+#endif
+
+/*************************** GMAC TEST MAIN ****************************/
 
 TEST_GROUP(HAL_GMAC);
 
