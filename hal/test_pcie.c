@@ -240,6 +240,7 @@ TEST(HAL_PCIE, PCIeDMASimpleTest){
 
     /* DMA write test */
     memset(&table, 0, sizeof(struct DMA_TABLE));
+    HAL_DCACHE_CleanByRange(TEST_PCIE_DMA_LOCAL_ADDR, TEST_PCIE_DMA_SIZE);
     table.bufSize = TEST_PCIE_DMA_SIZE;
     table.bus = TEST_PCIE_DMA_BUS_ADDR;
     table.local = TEST_PCIE_DMA_LOCAL_ADDR;
@@ -254,6 +255,7 @@ TEST(HAL_PCIE, PCIeDMASimpleTest){
 
     /* DMA read test */
     memset(&table, 0, sizeof(struct DMA_TABLE));
+    HAL_DCACHE_CleanByRange(TEST_PCIE_DMA_LOCAL_ADDR, TEST_PCIE_DMA_SIZE);
     table.bufSize = TEST_PCIE_DMA_SIZE;
     table.bus = TEST_PCIE_DMA_BUS_ADDR;
     table.local = TEST_PCIE_DMA_LOCAL_ADDR;
@@ -263,6 +265,7 @@ TEST(HAL_PCIE, PCIeDMASimpleTest){
     HAL_PCIE_ConfigDma(&s_pcieHandle, &table);
     HAL_PCIE_StartDma(&s_pcieHandle, &table);
     ret = PCIE_WaitForDmaFinished(&s_pcieHandle, &table);
+    HAL_DCACHE_InvalidateByRange(TEST_PCIE_DMA_LOCAL_ADDR, TEST_PCIE_DMA_SIZE);
     TEST_ASSERT(ret == 0);
     printf("PCIe DMA rd success\n");
 }
