@@ -597,7 +597,11 @@ static void SPI_ReadTest(uint16_t size)
 
 TEST_GROUP_RUNNER(HAL_SPI){
 #ifdef HAL_PL330_MODULE_ENABLED
+#ifdef DMA0_BASE
     struct HAL_PL330_DEV *pl330 = &g_pl330Dev0;
+#else
+    struct HAL_PL330_DEV *pl330 = &g_pl330Dev;
+#endif
 
     HAL_PL330_Init(pl330);
     s_pl330 = pl330;
