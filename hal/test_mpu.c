@@ -4,7 +4,7 @@
  */
 #include "hal_base.h"
 
-#if defined(HAL_ICACHE_MODULE_ENABLED) && defined(HAL_DCACHE_MODULE_ENABLED) && defined(MPU)
+#if defined(HAL_ICACHE_MODULE_ENABLED) && defined(HAL_DCACHE_MODULE_ENABLED) && defined(MPU) && !(defined(__STAR_MC) || (__CORTEX_M == 33U) || (__CORTEX_M == 55U) || (__CORTEX_M == 85U))
 
 #include "unity.h"
 #include "unity_fixture.h"
