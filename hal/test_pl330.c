@@ -80,7 +80,8 @@ TEST(HAL_PL330, MemcpyTest){
 }
 
 TEST_GROUP_RUNNER(HAL_PL330){
-    uint32_t ret, timeout = 1000;
+    uint32_t ret;
+    int timeout = 1000;
 
 #ifdef DMA0_BASE
     struct HAL_PL330_DEV *pl330 = &g_pl330Dev0;
@@ -110,7 +111,7 @@ TEST_GROUP_RUNNER(HAL_PL330){
         HAL_DelayUs(10);
     }
 
-    TEST_ASSERT(timeout != 0);
+    TEST_ASSERT(timeout != -1);
     ret = HAL_PL330_DeInit(pl330);
     TEST_ASSERT(ret == HAL_OK);
 }
