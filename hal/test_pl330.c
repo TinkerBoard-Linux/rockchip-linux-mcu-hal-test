@@ -105,7 +105,7 @@ TEST_GROUP_RUNNER(HAL_PL330){
 
     RUN_TEST_CASE(HAL_PL330, MemcpyTest);
     while (timeout--) {
-        if (pl330->pReg->INTEN & (1 << TEST_CHANNEL) == 0)
+        if ((pl330->pReg->INTEN & (1 << TEST_CHANNEL)) == 0)
             break;
 
         HAL_DelayUs(10);
