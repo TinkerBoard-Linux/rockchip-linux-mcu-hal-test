@@ -629,9 +629,9 @@ static HAL_Status GMAC_Init(uint8_t id)
     interface = eth->mode;
 
     if (interface == PHY_INTERFACE_MODE_RGMII) {
-        HAL_CRU_ClkSetFreq(gmacDev->clkID, 125000000);
+        HAL_CRU_ClkSetFreq(gmacDev->clkID125M, 125000000);
     } else {
-        HAL_CRU_ClkSetFreq(gmacDev->clkID, 50000000);
+        HAL_CRU_ClkSetFreq(gmacDev->clkID50M, 50000000);
     }
 
     freq = HAL_CRU_ClkGetFreq(gmacDev->pclkID);
@@ -864,7 +864,8 @@ TEST_GROUP_RUNNER(HAL_GMAC) {
         GMAC_Iomux_Config(bus);
 
         HAL_CRU_ClkEnable(eth->halDev->pclkGateID);
-        HAL_CRU_ClkEnable(eth->halDev->clkGateID);
+        HAL_CRU_ClkEnable(eth->halDev->clkGateID125M);
+        HAL_CRU_ClkEnable(eth->halDev->clkGateID50M);
 
         /* Register irq */
 
@@ -899,7 +900,8 @@ TEST_GROUP_RUNNER(HAL_GMAC) {
         }
 
         HAL_CRU_ClkDisable(eth->halDev->pclkGateID);
-        HAL_CRU_ClkDisable(eth->halDev->clkGateID);
+        HAL_CRU_ClkDisable(eth->halDev->clkGateID125M);
+        HAL_CRU_ClkDisable(eth->halDev->clkGateID50M);
 
         free_align(eth->txBuff);
         free_align(eth->rxBuff);
