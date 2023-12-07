@@ -145,6 +145,29 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
 };
 #endif
 
+#if defined(HAL_GMAC_MODULE_ENABLED) && defined(SOC_RK3562)
+static struct GMAC_ETH_CONFIG ethConfigTable[] =
+{
+#ifdef HAL_GMAC0
+    {
+        .halDev = &g_gmac0Dev,
+        .mode = PHY_INTERFACE_MODE_RGMII,
+        .maxSpeed = 1000,
+        .phyAddr = 1,
+
+        .extClk = false,
+
+        .resetGpioBank = GPIO3,
+        .resetGpioNum = GPIO_PIN_A0,
+        .resetDelayMs = { 0, 20, 100 },
+
+        .txDelay = 0x3C,
+        .rxDelay = 0x2f,
+    },
+#endif
+};
+#endif
+
 #if defined(HAL_GMAC1000_MODULE_ENABLED) && defined(SOC_RK3358)
 static struct GMAC_ETH_CONFIG ethConfigTable[] =
 {
