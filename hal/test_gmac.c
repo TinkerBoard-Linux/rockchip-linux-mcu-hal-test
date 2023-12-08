@@ -153,7 +153,7 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
         .halDev = &g_gmac0Dev,
         .mode = PHY_INTERFACE_MODE_RGMII,
         .maxSpeed = 1000,
-        .phyAddr = 1,
+        .phyAddr = 0,
 
         .extClk = false,
 
@@ -162,7 +162,7 @@ static struct GMAC_ETH_CONFIG ethConfigTable[] =
         .resetDelayMs = { 0, 20, 100 },
 
         .txDelay = 0x3C,
-        .rxDelay = 0x2f,
+        .rxDelay = 0,
     },
 #endif
 };
@@ -850,6 +850,48 @@ static void GMAC_Iomux_Config(uint8_t id)
     WRITE_REG_MASK_WE(GRF->SOC_CON5,
                       GRF_SOC_CON5_GRF_MAC_MULTI_IOFUNC_SRC_SEL_MASK,
                       (1 << GRF_SOC_CON5_GRF_MAC_MULTI_IOFUNC_SRC_SEL_SHIFT));
+}
+#endif
+#endif
+
+#ifdef SOC_RK3562
+#ifdef HAL_GMAC0
+/**
+ * @brief  Config iomux for GMAC0
+ */
+static void GMAC_Iomux_Config(uint8_t id)
+{
+    /* GMAC0 iomux */
+    HAL_PINCTRL_SetIOMUX(GPIO_BANK3,
+                         GPIO_PIN_A0 | /* RGMII_RSTn */
+                         GPIO_PIN_A1 , /* RGMII_INT/PMEB_M0 */
+                         PIN_CONFIG_MUX_FUNC0);
+
+    HAL_GPIO_SetPinDirection(GPIO3, GPIO_PIN_A1, GPIO_IN);
+    HAL_GPIO_SetPinDirection(GPIO3, GPIO_PIN_A0, GPIO_OUT);
+    HAL_GPIO_SetPinLevel(GPIO3, GPIO_PIN_A0, GPIO_HIGH);
+
+    HAL_PINCTRL_SetIOMUX(GPIO_BANK3,
+                         GPIO_PIN_D4 | /* RGMII_TXD2_M0 */
+                         GPIO_PIN_D5 | /* RGMII_TXD3_M0 */
+                         GPIO_PIN_D6 | /* RGMII_TXCLK_M0 */
+                         GPIO_PIN_D7 , /* RGMII_RXD2_M0 */
+                         PIN_CONFIG_MUX_FUNC2);
+
+    HAL_PINCTRL_SetIOMUX(GPIO_BANK4,
+                         GPIO_PIN_A0 | /* RGMII_RXD3_M0 */
+                         GPIO_PIN_A1 | /* RGMII_RXCLK_M0 */
+                         GPIO_PIN_A2 | /* RGMII_TXD0_M0 */
+                         GPIO_PIN_A3 | /* RGMII_TXD1_M0 */
+                         GPIO_PIN_A4 | /* RGMII_TXEN_M0 */
+                         GPIO_PIN_A5 | /* RGMII_RXD0_M0 */
+                         GPIO_PIN_A6 | /* RGMII_RXD1_M0 */
+                         GPIO_PIN_A7 | /* RGMII_RXDV_M0 */
+                         GPIO_PIN_B1 | /* ETH_CLK_25M_OUT_M0 */
+                         GPIO_PIN_B2 | /* RGMII_MDC_M0 */
+                         GPIO_PIN_B3 | /* RGMII_MDIO_M0 */
+                         GPIO_PIN_B7 , /* RGMII_CLK_M0 */
+                         PIN_CONFIG_MUX_FUNC2);
 }
 #endif
 #endif
