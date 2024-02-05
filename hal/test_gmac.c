@@ -104,6 +104,26 @@ static unsigned int m_nocachemem_inited = 0;
 
 static uint8_t dstAddr[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
+#if defined(HAL_GMAC_MODULE_ENABLED) && defined(RKMCU_RK2118)
+static struct GMAC_ETH_CONFIG ethConfigTable[] =
+{
+    {
+        .halDev = &g_gmac0Dev,
+        .mode = PHY_INTERFACE_MODE_RMII,
+        .maxSpeed = 100,
+        .phyAddr = 1,
+
+        .extClk = false,
+
+/*
+        .resetGpioBank = GPIO2,
+        .resetGpioNum = GPIO_PIN_D3,
+        .resetDelayMs = { 0, 20, 100 },
+*/
+    },
+};
+#endif
+
 #if defined(HAL_GMAC_MODULE_ENABLED) && defined(SOC_RK3568)
 static struct GMAC_ETH_CONFIG ethConfigTable[] =
 {
