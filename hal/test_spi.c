@@ -43,7 +43,7 @@ struct SPI_DEVICE_CLASS {
                                       \
 struct SPI_DEVICE_CLASS gSpiDev##ID = \
 {                                     \
-    .halDev = &g_spi##ID##Dev,          \
+    .halDev = &g_spi##ID##Dev,        \
 };                                    \
 
 #define ROCKCHIP_SPI(ID) gSpiDev##ID
@@ -287,6 +287,7 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
     struct SPI_HANDLE *pSPI = &spi->instance;
     uint64_t timeout;
     HAL_Status ret = HAL_OK;
+
 #ifdef HAL_PL330_MODULE_ENABLED
     uint32_t start, timeoutMs;
 #endif
@@ -308,7 +309,11 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
         pSPI->dmaBurstSize = spi->dmaBurstSize;
         HAL_SPI_DmaTransfer(pSPI);
         SPI_DmaPrepare(spi, message);
-        timeoutMs = HAL_SPI_CalculateTimeout(&spi->instance);
+        if (pSPI->config.opMode = CR0_OPM_MASTER) {
+            timeoutMs = HAL_SPI_CalculateTimeout(&spi->instance);
+        } else {
+            timeoutMs = 0xFFFFFFFF;
+        }
         if (message->sendBuf) {
             start = HAL_GetTick();
             do {
@@ -346,6 +351,13 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
         if (message->sendBuf) {
             HAL_PL330_Stop(spi->dmaTxChan);
             HAL_PL330_ReleaseChannel(spi->dmaTxChan);
+            timeout = HAL_GetTick() + ROCKCHIP_SPI_TX_IDLE_TIMEOUT; /* some tolerance */
+            do {
+                ret = HAL_SPI_QueryBusState(pSPI);
+                if (ret == HAL_OK) {
+                    break;
+                }
+            } while (timeout > HAL_GetTick());
         }
 
         if (message->recvBuf) {
