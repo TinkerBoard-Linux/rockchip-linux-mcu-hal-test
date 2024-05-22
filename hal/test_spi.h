@@ -71,10 +71,11 @@ struct RK_SPI_MESSAGE {
 };
 
 HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *config);
-uint32_t SPI_Write(uint8_t id, uint8_t cs, const void *sendBuf, uint32_t length);
-uint32_t SPI_Read(uint8_t id, uint8_t cs, void *recvBuf, uint32_t length);
-HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1);
-HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1);
-HAL_Status SPI_Init(uint8_t id);
+int32_t SPI_Write(uint8_t id, uint8_t cs, const void *sendBuf, uint32_t length);
+int32_t SPI_Read(uint8_t id, uint8_t cs, void *recvBuf, uint32_t length);
+int32_t SPI_Duplex(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length);
+int32_t SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1);
+int32_t SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1);
+HAL_Status SPI_Init(uint8_t id, uint32_t speed);
 
 #endif

@@ -18,9 +18,6 @@
 /***************************** Structure Definition **************************/
 
 struct SPI_DEVICE_CLASS {
-    /* status */
-    uint32_t error;
-
     /* Hal */
     struct SPI_HANDLE instance;
     const struct HAL_SPI_DEV *halDev;
@@ -38,15 +35,15 @@ struct SPI_DEVICE_CLASS {
 
 /********************* Private MACRO Definition ******************************/
 
-#define DEFINE_ROCKCHIP_SPI(ID)       \
-                                      \
-                                      \
-struct SPI_DEVICE_CLASS gSpiDev##ID = \
-{                                     \
-    .halDev = &g_spi##ID##Dev,        \
-};                                    \
+#define DEFINE_ROCKCHIP_SPI_HAL(ID)      \
+                                         \
+                                         \
+struct SPI_DEVICE_CLASS gSpiHalDev##ID = \
+{                                        \
+    .halDev = &g_spi##ID##Dev,           \
+};                                       \
 
-#define ROCKCHIP_SPI(ID) gSpiDev##ID
+#define ROCKCHIP_SPI_HAL(ID) gSpiHalDev##ID
 
 #define RXBUSY (1 << 0)
 #define TXBUSY (1 << 1)
@@ -64,38 +61,38 @@ static uint8_t mcrRxBuf[PL330_CHAN_BUF_LEN];
 
 /* Define SPI resource */
 #ifdef SPI0
-DEFINE_ROCKCHIP_SPI(0)
+DEFINE_ROCKCHIP_SPI_HAL(0)
 #endif
 #ifdef SPI1
-DEFINE_ROCKCHIP_SPI(1)
+DEFINE_ROCKCHIP_SPI_HAL(1)
 #endif
 #ifdef SPI2
-DEFINE_ROCKCHIP_SPI(2)
+DEFINE_ROCKCHIP_SPI_HAL(2)
 #endif
 #ifdef SPI3
-DEFINE_ROCKCHIP_SPI(3)
+DEFINE_ROCKCHIP_SPI_HAL(3)
 #endif
 
 /* Add SPI resource to group */
-struct SPI_DEVICE_CLASS *gSpiDev[SPI_DEVICE_MAX] =
+struct SPI_DEVICE_CLASS *gSpiHalDev[SPI_DEVICE_MAX] =
 {
 #ifdef SPI0
-    &ROCKCHIP_SPI(0),
+    &ROCKCHIP_SPI_HAL(0),
 #else
     NULL,
 #endif
 #ifdef SPI1
-    &ROCKCHIP_SPI(1),
+    &ROCKCHIP_SPI_HAL(1),
 #else
     NULL,
 #endif
 #ifdef SPI2
-    &ROCKCHIP_SPI(2),
+    &ROCKCHIP_SPI_HAL(2),
 #else
     NULL,
 #endif
 #ifdef SPI3
-    &ROCKCHIP_SPI(3),
+    &ROCKCHIP_SPI_HAL(3),
 #else
     NULL,
 #endif
@@ -107,7 +104,7 @@ struct SPI_DEVICE_CLASS *gSpiDev[SPI_DEVICE_MAX] =
 
 HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
 {
-    struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiDev[id];
+    struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiHalDev[id];
     struct SPI_HANDLE *pSPI = &spi->instance;
     struct SPI_CONFIG *pSPIConfig = &pSPI->config;
 
@@ -182,6 +179,8 @@ HAL_Status SPI_Configure(uint8_t id, struct RK_SPI_CONFIG *configuration)
     pSPI->maxFreq = SPI_MAX_SCLK_RATE;
     pSPIConfig->speed = configuration->maxHz;
 #endif
+    /* Set unkown */
+    pSPI->config.xfmMode = 0xffffffff;
 
     return HAL_OK;
 }
@@ -281,23 +280,26 @@ static int SPI_DmaPrepare(struct SPI_DEVICE_CLASS *spi, struct RK_SPI_MESSAGE *m
 }
 #endif
 
-static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
+static int32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
 {
-    struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiDev[id];
+    struct SPI_DEVICE_CLASS *spi = (struct SPI_DEVICE_CLASS *)gSpiHalDev[id];
     struct SPI_HANDLE *pSPI = &spi->instance;
     uint64_t timeout;
-    HAL_Status ret = HAL_OK;
+    int32_t ret = HAL_OK;
+    uint32_t mode = 0;
 
 #ifdef HAL_PL330_MODULE_ENABLED
     uint32_t start, timeoutMs;
 #endif
 
-    HAL_ASSERT((message->sendBuf != NULL) || (message->recvBuf != NULL));
+    if (id >= SPI_DEVICE_MAX) {
+        HAL_DBG_ERR("%s input invalid\n", __func__);
 
-    /* Configure spi mode here. */
+        return HAL_INVAL;
+    }
+
     HAL_SPI_Configure(pSPI, message->sendBuf, message->recvBuf, message->length);
 
-    spi->error = 0;
     if (message->csTake) {
         HAL_SPI_SetCS(pSPI, message->ch, true);
     }
@@ -309,7 +311,7 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
         pSPI->dmaBurstSize = spi->dmaBurstSize;
         HAL_SPI_DmaTransfer(pSPI);
         SPI_DmaPrepare(spi, message);
-        if (pSPI->config.opMode = CR0_OPM_MASTER) {
+        if (pSPI->config.opMode == CR0_OPM_MASTER) {
             timeoutMs = HAL_SPI_CalculateTimeout(&spi->instance);
         } else {
             timeoutMs = 0xFFFFFFFF;
@@ -373,7 +375,7 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
 #endif
         HAL_SPI_PioTransfer(pSPI);
         /* If tx, wait until the FIFO data completely. */
-        if (message->sendBuf) {
+        if (message->sendBuf && HAL_SPI_QueryBusState(pSPI) != HAL_OK) {
             timeout = HAL_GetTick() + ROCKCHIP_SPI_TX_IDLE_TIMEOUT; /* some tolerance */
             do {
                 ret = HAL_SPI_QueryBusState(pSPI);
@@ -384,11 +386,6 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
         }
     }
 
-    if (HAL_OK != ret) {
-        spi->error = ret;
-        HAL_DBG("%s error\n", __func__);
-    }
-
     /* Disable SPI when finished. */
     HAL_SPI_Stop(pSPI);
 
@@ -396,13 +393,12 @@ static uint32_t SPI_ReadAndWrite(uint8_t id, struct RK_SPI_MESSAGE *message)
         HAL_SPI_SetCS(pSPI, message->ch, false);
     }
 
-    /* Successful to return message length and fail to return 0. */
-    return spi->error ? 0 :  message->length;
+    /* Successful to return message length and fail to return ret. */
+    return ret == HAL_OK ? message->length : ret;
 }
 
-static uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length)
+static int32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length)
 {
-    uint32_t ret;
     struct RK_SPI_MESSAGE message;
 
     /* initial message */
@@ -413,31 +409,28 @@ static uint32_t SPI_Transfer(uint8_t id, uint8_t ch, const void *sendBuf, void *
     message.csTake = 1;
     message.csRelease = 1;
 
-    ret = SPI_ReadAndWrite(id, &message);
-
-    return ret;
+    return SPI_ReadAndWrite(id, &message);
 }
 
-uint32_t SPI_Read(uint8_t id, uint8_t ch, void *recvBuf, uint32_t length)
+int32_t SPI_Read(uint8_t id, uint8_t ch, void *recvBuf, uint32_t length)
 {
-    HAL_ASSERT(id < SPI_DEVICE_MAX);
-
     return SPI_Transfer(id, ch, NULL, recvBuf, length);
 }
 
-uint32_t SPI_Write(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t length)
+int32_t SPI_Write(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t length)
 {
-    HAL_ASSERT(id < SPI_DEVICE_MAX);
-
     return SPI_Transfer(id, ch, sendBuf, NULL, length);
 }
 
-HAL_Status SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1)
+int32_t SPI_Duplex(uint8_t id, uint8_t ch, const void *sendBuf, void *recvBuf, uint32_t length)
 {
-    HAL_Status ret = HAL_OK;
-    struct RK_SPI_MESSAGE message;
+    return SPI_Transfer(id, ch, sendBuf, recvBuf, length);
+}
 
-    HAL_ASSERT(id < SPI_DEVICE_MAX);
+int32_t SPI_SendThenSend(uint8_t id, uint8_t ch, const void *sendBuf0, uint32_t len0, const void *sendBuf1, uint32_t len1)
+{
+    int32_t ret = HAL_OK;
+    struct RK_SPI_MESSAGE message;
 
     /* initial first send message */
     message.ch = ch;
@@ -472,12 +465,10 @@ out:
     return ret;
 }
 
-HAL_Status SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
+int32_t SPI_SendThenRecv(uint8_t id, uint8_t ch, const void *sendBuf, uint32_t len0, void *recvBuf, uint32_t len1)
 {
-    HAL_Status ret = HAL_OK;
+    int32_t ret = HAL_OK;
     struct RK_SPI_MESSAGE message;
-
-    HAL_ASSERT(id < SPI_DEVICE_MAX);
 
     /* initial first send message */
     message.ch = ch;
@@ -510,16 +501,21 @@ out:
     return ret;
 }
 
-HAL_Status SPI_Init(uint8_t id)
+HAL_Status SPI_Init(uint8_t id, uint32_t speed)
 {
     struct SPI_DEVICE_CLASS *spi;
     struct RK_SPI_CONFIG config;
+    HAL_Status ret;
 
-    HAL_ASSERT(id < SPI_DEVICE_MAX);
+    if (id >= SPI_DEVICE_MAX || speed > HAL_SPI_MASTER_MAX_SCLK_OUT) {
+        HAL_DBG("%s input invalid, id=%d speed=%ld\n", __func__, id, speed);
+
+        return HAL_INVAL;
+    }
 
     memset(&config, 0, sizeof(struct RK_SPI_CONFIG));
 
-    spi = gSpiDev[id];
+    spi = gSpiHalDev[id];
     if (!spi) {
         return HAL_ERROR;
     }
@@ -529,10 +525,13 @@ HAL_Status SPI_Init(uint8_t id)
     /* Pre-config */
     config.mode |= RK_SPI_MASTER;
     config.dataWidth = 8;
-    config.maxHz = ROCKCHIP_SPI_SPEED_DEFAULT;
-    SPI_Configure(id, &config);
+    config.maxHz = speed;
+    ret = SPI_Configure(id, &config);
+    if (ret) {
+        HAL_DBG("%s configure failed, ret=%d\n", __func__, ret);
+    }
 
-    return HAL_OK;
+    return ret;
 }
 
 /*************************** SPI TEST ****************************/
@@ -554,7 +553,7 @@ TEST_TEAR_DOWN(HAL_SPI){
 }
 
 /* SPI test case 0 */
-static void SPI_LoopTest(uint16_t size)
+static void SPI_DuplexTest(uint16_t size)
 {
     uint32_t i, ret;
 
@@ -565,7 +564,7 @@ static void SPI_LoopTest(uint16_t size)
     }
     tx[0] = 0xa5;
     memset(rx, 0, SPI_TEST_SIZE);
-    ret = SPI_Transfer(SPI_TEST_ID, 0, (const void *)tx, (void *)rx, size);
+    ret = SPI_Duplex(SPI_TEST_ID, 0, (const void *)tx, (void *)rx, size);
     TEST_ASSERT(ret == size);
 
     for (i = 0; i < size; i++) {
@@ -630,19 +629,18 @@ TEST_GROUP_RUNNER(HAL_SPI){
     tx = (uint8_t *)(((uint32_t)&tx_buf + 0x3f) & (~0x3f));
     rx = (uint8_t *)(((uint32_t)&rx_buf + 0x3f) & (~0x3f));
 
-    SPI_Init(SPI_TEST_ID);
+    SPI_Init(SPI_TEST_ID, ROCKCHIP_SPI_SPEED_DEFAULT);
 
     HAL_DBG("If loop at \"[HAL INFO] SPI0 loop test, size=1\", check iomux and clock enable\n");
-    SPI_LoopTest(1);
-    SPI_LoopTest(31);
-    SPI_LoopTest(32);
-    SPI_LoopTest(128);
-    SPI_LoopTest(4095);
-    SPI_LoopTest(4096);
+    SPI_DuplexTest(1);
+    SPI_DuplexTest(31);
+    SPI_DuplexTest(32);
+    SPI_DuplexTest(128);
+    SPI_DuplexTest(4095);
+    SPI_DuplexTest(4096);
     SPI_WriteTest(32);
     SPI_WriteTest(1024);
     SPI_ReadTest(32);
     SPI_ReadTest(1024);
 }
-
 #endif
